@@ -52,6 +52,10 @@ class AmphibianReader:
                 # Last date for the quote at or after the maximum date?
                 max_date_cond = df.Date.tail(1).iloc[0] >= self.max_date
                 if min_date_cond and max_date_cond:
+                    df = df[
+                        (df.Date >= self.min_date)
+                        & (df.Date <= self.max_date)
+                    ]
                     self.csvs[reg][file] = df
         return self.csvs
 
