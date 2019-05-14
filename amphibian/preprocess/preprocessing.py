@@ -23,22 +23,6 @@ class TimeSeriesDataset(Dataset):
 '''TO DO:
 1. Compose transforms - filling nan -> scalling -> train_test split
 2. compute_returns
-2. fill_nan
-3. scalling
-4. train_test spli
-
-Zalety podklasy:
-1. daje dostep do wszystkich metod i atrybutow
-2. wtedy processing mialby brac obiekt z klasy AmphibianReader i na tym obiekcie 
-
-Pytania:
-1. Co w naszym przypadku będzie batchem
-'''
-
-'''
-- patrzymy po branzy
-- liczenie srednich i odchylen na training set i pozniej aplikacja do test set
-- chce robic prognoze jednej spolki
 '''
 
 '''
