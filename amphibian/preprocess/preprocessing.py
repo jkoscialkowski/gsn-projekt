@@ -1,6 +1,48 @@
-from amphibian.fetch.reader import AmphibianReader
-import torch
-import datetime
+from torch.utils.data import Dataset, DataLoader
+from torchvision import transforms, utils
+
+class TimeSeriesDataset(Dataset):
+    def __init__(self, amReader, int_len = 30, input_reg = 'ASIA_PACIFIC', pred_reg = 'EMEIA'):
+        self.amReader = amReader
+        self.len = self.amReader.torch[input_reg].size()[0] - int_len
+        self.observation = {}
+        self.y = {}
+        sample_no = 0
+        for i in range(self.len):
+            self.observation[i] = self.amReader.torch[input_reg][i:i + int_len, :, :]
+            self.y[i] = self.amReader.torch[pred_reg][i + int_len - 1, 5, 0] # we want to predict Adj Close price
+
+    def __len__(self): # return the length of the data
+        return self.len
+
+    def __getitem__(self, item): # return one item on the index
+        return self.observation[item], self.y[item]
+
+
+
+'''TO DO:
+1. Compose transforms - filling nan -> scalling -> train_test split
+2. compute_returns
+2. fill_nan
+3. scalling
+4. train_test spli
+
+Zalety podklasy:
+1. daje dostep do wszystkich metod i atrybutow
+2. wtedy processing mialby brac obiekt z klasy AmphibianReader i na tym obiekcie 
+
+Pytania:
+1. Co w naszym przypadku będzie batchem
+'''
+
+'''
+- patrzymy po branzy
+- liczenie srednich i odchylen na training set i pozniej aplikacja do test set
+- chce robic prognoze jednej spolki
+'''
+
+'''
+############## DRAFT, NOTES
 
 class AmphibianPreprocess(AmphibianReader):
     def __init__(self, data_path: str,
@@ -28,22 +70,20 @@ class AmphibianPreprocess(AmphibianReader):
                     for k in range(len(self.torch[reg][0, 0, :])):
                         for i in range(len(self.torch[reg][:, 0, 0])):
                             if torch.isnan(self.torch[reg][i, j, k]):
-                                if torch.isnan(self.torch[reg][i - 1, j, k]) != 1:
-                                    self.torch[reg][i, j, k] = self.torch[reg][i - 1, j, k]
+                                self.torch[reg][i, j, k] = self.torch[reg][i - 1, j, k]
         return self.torch
 
     # function, which computes returns
-    def compute_returns(self, method = 'day_before'):
+    def compute_returns(self, method = 'returns'):
         """Creating tensor with return
 
         :return: self.torch_returns - tensor with returns"""
 
-        self.torch_returns = self.create_torch()
         self.fill_nan()
+        if method == 'returns':
 
-'''TO DO:
-1. compute_returns
-2. Dataloader
-3. Dataset
-4. Multiprocessing
+
+        return 0
+
 '''
+
