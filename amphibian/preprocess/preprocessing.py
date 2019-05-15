@@ -1,13 +1,14 @@
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
+from torchvision import transforms
 
 class TimeSeriesDataset(Dataset):
-    def __init__(self, amReader, int_len = 30, input_reg = 'ASIA_PACIFIC', pred_reg = 'EMEIA'):
+    def __init__(self, amReader, int_len = 30, input_reg = 'ASIA_PACIFIC', pred_reg = 'EMEIA', transform=None):
+        self.transform = transform
         self.amReader = amReader
         self.len = self.amReader.torch[input_reg].size()[0] - int_len
         self.observation = {}
         self.y = {}
-        sample_no = 0
         for i in range(self.len):
             self.observation[i] = self.amReader.torch[input_reg][i:i + int_len, :, :]
             self.y[i] = self.amReader.torch[pred_reg][i + int_len - 1, 5, 0] # we want to predict Adj Close price
@@ -16,8 +17,20 @@ class TimeSeriesDataset(Dataset):
         return self.len
 
     def __getitem__(self, item): # return one item on the index
-        return self.observation[item], self.y[item]
+        obs = self.observation[item]
+        y = self.y[item]
+        sample = {'Observations': obs, 'y': y}
+        if self.transform:
+            sample = self.transform(sample)
 
+        return sample
+
+class Fill_NaN(object):
+
+    def __call__(self, sample, value = 1):
+        obs, y = sample['Observation'], sample['y']
+        y[y != y] = value
+        return {'Observations': obs, 'y': y}
 
 
 '''TO DO:
