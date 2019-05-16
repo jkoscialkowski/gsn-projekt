@@ -111,3 +111,6 @@ venv.bak/
 
 # Notebooks for testing which we don't want to commit
 test*.ipynb
+
+# Files for testing
+test*.py
