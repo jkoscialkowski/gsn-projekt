@@ -57,6 +57,7 @@ class AmphibianReader:
                         & (df.Date <= self.max_date)
                     ]
                     self.csvs[reg][file] = df
+
         return self.csvs
 
     def get_unique_dates(self):
