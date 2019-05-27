@@ -108,9 +108,3 @@ venv.bak/
 
 # Data files which should not be commited
 /data/all_values
-
-# Notebooks for testing which we don't want to commit
-test*.ipynb
-
-# Files for testing
-test*.py
