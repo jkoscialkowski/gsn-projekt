@@ -19,14 +19,11 @@ class LSTMModel(nn.Module):
         :param dropout: dropout probability in the LSTM layer
         """
         super().__init__()
-
-        self.hidden_size = hidden_size
-        self.batch_size = batch_size
-        self.seq_len = seq_len
-        self.input_size = input_size
-        self.n_outputs = n_outputs
-        self.num_layers = num_layers
-        self.dropout = dropout
+        # Setting parameters
+        args, _, _, values = inspect.getargvalues(inspect.currentframe())
+        values.pop("self")
+        for arg, val in values.items():
+            setattr(self, arg, val)
 
         self.lstm = nn.LSTM(input_size=self.input_size,
                             hidden_size=self.hidden_size,
@@ -44,3 +41,5 @@ class LSTMModel(nn.Module):
         out, _ = self.lstm(X, hidden)
         out = self.fc(out[-1, :, :].squeeze())
         return out
+
+
