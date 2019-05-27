@@ -31,27 +31,6 @@ class RNN_model(nn.Module):
     def forward(self, X):
         # remember about transforming data in the right dimension - (n_steps X batch_size X n_inputs)
         self.hidden = self.init_hidden()
-
-        out, self.hidden = self.rnn(X, self.hidden)
-        out = self.fc(self.hidden)
-
-        return self.rnn(X, self.hidden), out
-
-# TEST
-X_batch = torch.tensor([[[1, 2, 5]],
-                        [[1, 2, 3]],
-                        [[1, 2, 3]],
-                        [[0, 1, 2]]],
-                        dtype = torch.float
-                       )
-batch_size = X_batch.size(1)
-n_inputs = X_batch.size(2)
-n_steps = X_batch.size(0)
-
-n_neurons = 2
-n_outputs = 1
-n_layers = 1 # upgrade class for abitrary number of layers
-
-torch.zeros(1, 4, 3)
-model = RNN_model(batch_size, n_steps, n_inputs, n_neurons, n_outputs, n_layers)
-model(X_batch)
+        out, _ = self.rnn(X, self.hidden)
+        out = self.fc(out[-1, :, :].squeeze())
+        return out
