@@ -4,7 +4,8 @@ import torch.nn as nn
 class RNN_model(nn.Module):
     def __init__(self, batch_size, n_steps, n_inputs, n_neurons, n_outputs, n_layers): # remember about cuda_device
         """
-        Class RNN_model - object of this class is the architecture which consists of RNN layers and fully connected layer
+        Class RNN_model - object of this class is the architecture which consists of
+        RNN layers and fully connected layer
 
         :param batch_size: size of the batch
         :param n_steps: number of days
