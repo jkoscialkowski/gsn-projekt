@@ -5,6 +5,15 @@ from torchvision import transforms
 
 class TimeSeriesDataset(Dataset):
     def __init__(self, amReader, int_len = 5, input_reg = 'ASIA_PACIFIC', pred_reg = 'EMEIA', transform=None):
+        """
+        Class TimeSeriesDataset - object of this class is the
+
+        :param amReader: object from AmphibianReader class
+        :param int_len: number of days in one observation
+        :param input_reg: input region
+        :param pred_reg: region, which we would like to predict
+        :param transform: sequence of transformations, default: None
+        """
         self.transform = transform
         self.amReader = amReader
         self.whole_set = {'observations': self.amReader.torch[input_reg],
@@ -34,7 +43,7 @@ class Fill_NaN(object):
         obs, y = whole_set['observations'], whole_set['y']
         for i in range(len(obs[:, 0, 0])):
             if (torch.isnan(y[i])) and (i > 0):
-                y[i] = y [i - 1]
+                y[i] = y[i - 1]
             for j in range(len(obs[0, :, 0])):
                 for k in range(len(obs[0, 0, :])):
                     if (torch.isnan(obs[i, j, k])) and (i > 0):
@@ -55,6 +64,19 @@ class Scaling(object):
                 for k in range(len(obs[:, 0, 0])):
                     obs[k, i, j] = (obs[k, i, j] - obs_mean)/obs_std
         return {'observations': obs, 'y': y}
+
+class Formatting(object):
+    def __call__(self, whole_set):
+        obs, y = whole_set['observations'], whole_set['y']
+        for i in range(len(obs[:, 0, 0])):
+            format_obs_1 = torch.cat((obs[i, 0, :], obs[i, 1, :]))
+            for j in range(2, len(obs[0, :, 0])):
+                format_obs_1 = torch.cat((format_obs_1, obs[i, j, :]))
+            if i == 0:
+                format_obs = format_obs_1
+            else:
+                format_obs = torch.stack((format_obs, format_obs_1))
+        return {'observations': format_obs, 'y': y}
 
 class Train_Test_split(object):
 
