@@ -15,7 +15,7 @@ Fazy preprocessingu:
 '''
 import numpy as np
 from amphibian.fetch.reader import AmphibianReader
-from amphibian.preprocess.preprocessing import TimeSeriesDataset, Fill_NaN, Normalizing, Dummy_Fill_NaN, Formatting
+from amphibian.preprocess.preprocessing import TimeSeriesDataset, Fill_NaN, Normalizing, Dummy_Fill_NaN, Formatting, Formatting_y
 import datetime
 import pandas as pd
 from torch.utils.data import DataLoader
@@ -56,7 +56,8 @@ batch_size = 5
 n_neurons = 5
 n_outputs = 1
 n_layers = 1
-ds = TimeSeriesDataset(amReader=a, int_len = n_steps, transform=transforms.Compose([Fill_NaN(), Dummy_Fill_NaN(), Normalizing(), Formatting()]))
+ds = TimeSeriesDataset(amReader=a, int_len = n_steps, transform=transforms.Compose([Fill_NaN(), Dummy_Fill_NaN(), Normalizing(), Formatting(), Formatting_y()]))
+print(ds.y)
 dataloader = DataLoader(ds, batch_size=batch_size, shuffle=True, num_workers=4)
 for i_batch, sample_batched in enumerate(dataloader):
     if i_batch == 0:

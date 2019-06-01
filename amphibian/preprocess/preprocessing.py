@@ -2,6 +2,9 @@
 TODO 1: Upgrade Fill_NaN - with averages,
 TODO 2: Train_test_split
 TODO 3: Upgrade normalizing - sometimes std < epsilon or
+TODO 4: add intervals for dates for CV; means and stds have to
+TODO 5: change argument amReader into Tensor
+TODO 6: format_[0] is set as 0 (stable)
 """
 
 """import modules"""
@@ -85,24 +88,18 @@ class Dummy_Fill_NaN(object):
         return {'observations': obs, 'y': y}
 
 class Normalizing(object):
-    def __call__(self, whole_set):
+    def __call__(self, whole_set, eps = 10 ** -3):
         """
         :param whole_set: set of observarions
         :return: normalized set of observations
         """
         obs, y = whole_set['observations'], whole_set['y']
-        y_mean = torch.mean(y)
-        y_std = torch.std(y)
-        if y_std < 10 ** -3:
-            y_std == 10 ** -3
-        for i in range(obs.size(0)):
-            y[i] = (y[i] - y_mean)/y_std
         for i in range(obs.size(1)):
             for j in range(obs.size(2)):
                 obs_mean = torch.mean(obs[:, i, j])
                 obs_std = torch.std(obs[:, i, j])
-                if obs_std < 10 ** -3:
-                    obs_std = 10 ** -3
+                if obs_std < eps:
+                    obs_std = eps
                 for k in range(obs.size(0)):
                     obs[k, i, j] = (obs[k, i, j] - obs_mean)/obs_std
         return {'observations': obs, 'y': y}
@@ -119,8 +116,22 @@ class Formatting(object):
             format_obs = torch.cat((format_obs, obs[i, :, :].resize(1, obs[i, :, :].numel())))
         return {'observations': format_obs, 'y': y}
 
-class Train_Test_split(object):
-
-    def __call__(self, sample):
-        return 0
-
+class Formatting_y(object):
+    def __call__(self, whole_set, eps_up = 0.01, eps_down = -0.01):
+        """
+        :param whole_set: set of observations
+        :param eps_up: threshold for return being regarded as 'up'
+        :param eps_down: threshold for return being regarded as 'down'
+        :return: transformed y observarions into three states: 1 - up; 0 - stable; -1 - down
+        """
+        obs, y = whole_set['observations'], whole_set['y']
+        format_y = torch.empty(len(y))
+        format_y[0] = 0
+        for i in range(1, len(y)):
+            if (y[i] - y[i - 1]) / y[i - 1] > eps_up:
+                format_y[i] = 1
+            elif (y[i] - y[i - 1]) / y[i - 1] < eps_down:
+                format_y[i] = -1
+            else:
+                format_y[i] = 0
+        return {'observations': obs, 'y': format_y}
