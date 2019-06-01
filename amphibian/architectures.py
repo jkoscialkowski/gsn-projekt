@@ -6,13 +6,26 @@ import torch.nn.functional as F
 
 # Transform data in the right dimension, (seq_len X batch_size X input_size)!
 
+class LogisticRegressionModel(nn.Module):
+    def __init__(self, input_size, n_outputs):
+        """
+        Class LogisticregressionModel - implementation Logistic Regression model
 
-class RNN_model(nn.Module):
+        :param input_size: size of input
+        :param n_outputs: size of out
+        """
+        super(LogisticRegressionModel, self).__init__()
+        self.linear = nn.Linear(input_size, n_outputs)
+
+    def forward(self, X):
+        out = F.softmax(self.linear(X))
+        return out
+
+class RNNModel(nn.Module):
     def __init__(self, batch_size, seq_len, input_size, hidden_size,
                  n_outputs, num_layers):
         """
-        Class RNN_model - object of this class is the architecture which consists of
-        RNN layers and fully connected layer
+        Class RNNmodel - implementation of simple RNN model
 
         :param batch_size: size of the batch
         :param seq_len: number of days
@@ -21,7 +34,7 @@ class RNN_model(nn.Module):
         :param n_outputs: number of output values from the fully connected layer
         :param num_layers: number of layers of the RNN
         """
-        super(RNN_model, self).__init__()
+        super(RNNModel, self).__init__()
 
         self.hidden_size = hidden_size
         self.batch_size = batch_size
