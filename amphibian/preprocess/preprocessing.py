@@ -129,9 +129,9 @@ class Formatting_y(object):
         format_y[0] = 0
         for i in range(1, len(y)):
             if (y[i] - y[i - 1]) / y[i - 1] > eps_up:
-                format_y[i] = 1
+                format_y[i] = 2
             elif (y[i] - y[i - 1]) / y[i - 1] < eps_down:
-                format_y[i] = -1
-            else:
                 format_y[i] = 0
+            else:
+                format_y[i] = 1
         return {'observations': obs, 'y': format_y}
