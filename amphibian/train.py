@@ -1,3 +1,6 @@
+# TODO 1: Implement random search
+# TODO 2: Look if parameters are passed correctly
+
 import inspect
 import torch
 import torch.nn as nn
