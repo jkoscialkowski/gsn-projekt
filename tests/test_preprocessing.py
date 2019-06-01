@@ -35,6 +35,10 @@ print(tts['train_obs'].size())
 print(tts['test_obs'].size())
 print(tts['train_y'].size())
 print(tts['test_y'].size())
+ds = TimeSeriesDataset(ttSplit=tts, int_len = 1, transform=transforms.Compose([Fill_NaN(), Normalizing(), Dummy_Fill_NaN(), Formatting()]))
+print(ds.test_obs)
+#a = np.array([1,2,3])
+#print(a[1:2])
 #print(a.torch["AMERICA"].size())
 #a.torch['AMERICA'].size()
 #format_obs_1 = a.torch['AMERICA'][1, :, :].resize(1, a.torch['AMERICA'][1, :, :].numel())
@@ -57,17 +61,13 @@ b.fill_nan()
 torch.isnan(b.torch['AMERICA'][:, 1, 1]).sum()
 '''
 
-'''
+
 n_steps = 5
 batch_size = 5
 n_neurons = 5
 n_outputs = 1
 n_layers = 1
-ds = TimeSeriesDataset(amReader=a, int_len = n_steps, transform=transforms.Compose([Fill_NaN(), Dummy_Fill_NaN(), Normalizing(), Formatting(), Formatting_y()]))
-print(ds[1])
-'''
 
-'''
 dataloader = DataLoader(ds, batch_size=batch_size, shuffle=True, num_workers=4)
 for i_batch, sample_batched in enumerate(dataloader):
     if i_batch == 0:
@@ -86,7 +86,7 @@ for i_batch, sample_batched in enumerate(dataloader):
         print("Attention")
         print(model_Attention(sample_batched['observations'].permute(1, 0, 2)))
         #print(torch.ones((2, ), dtype=torch.int8))
-'''
+
 
 """
 Obecny ksztalt: 
