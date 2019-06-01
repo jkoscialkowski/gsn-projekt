@@ -15,6 +15,7 @@ Fazy preprocessingu:
 '''
 import numpy as np
 from amphibian.fetch.reader import AmphibianReader
+from amphibian.preprocess.train_test_split import Train_test_split
 from amphibian.preprocess.preprocessing import TimeSeriesDataset, Fill_NaN, Normalizing, Dummy_Fill_NaN, Formatting, Formatting_y
 import datetime
 import pandas as pd
@@ -29,7 +30,12 @@ a = AmphibianReader('./data/all_values/stocks/Lodging',
 _ = a.read_csvs()
 _ = a.get_unique_dates()
 _ = a.create_torch()
-a.torch["AMERICA"].size()
+tts = Train_test_split(a, int_start=5, int_end=15)
+print(tts['train_obs'].size())
+print(tts['test_obs'].size())
+print(tts['train_y'].size())
+print(tts['test_y'].size())
+#print(a.torch["AMERICA"].size())
 #a.torch['AMERICA'].size()
 #format_obs_1 = a.torch['AMERICA'][1, :, :].resize(1, a.torch['AMERICA'][1, :, :].numel())
 #format_obs_1 = torch.cat((format_obs_1, a.torch['AMERICA'][1, :, :].resize(1, a.torch['AMERICA'][1, :, :].numel())))
@@ -51,13 +57,17 @@ b.fill_nan()
 torch.isnan(b.torch['AMERICA'][:, 1, 1]).sum()
 '''
 
+'''
 n_steps = 5
 batch_size = 5
 n_neurons = 5
 n_outputs = 1
 n_layers = 1
 ds = TimeSeriesDataset(amReader=a, int_len = n_steps, transform=transforms.Compose([Fill_NaN(), Dummy_Fill_NaN(), Normalizing(), Formatting(), Formatting_y()]))
-print(ds.y)
+print(ds[1])
+'''
+
+'''
 dataloader = DataLoader(ds, batch_size=batch_size, shuffle=True, num_workers=4)
 for i_batch, sample_batched in enumerate(dataloader):
     if i_batch == 0:
@@ -76,7 +86,7 @@ for i_batch, sample_batched in enumerate(dataloader):
         print("Attention")
         print(model_Attention(sample_batched['observations'].permute(1, 0, 2)))
         #print(torch.ones((2, ), dtype=torch.int8))
-
+'''
 
 """
 Obecny ksztalt: 
