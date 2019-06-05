@@ -185,7 +185,7 @@ class AttentionModel(nn.Module):
         hidden_post = self.init_hidden('post')
         if self.recurrent_type == 'lstm':
             state_post = self.init_hidden('post')
-        for el in range(self.hidden_size):
+        for el in range(self.seq_len):
             if self.alignment == 'ffnn':
                 # Mix last hidden state of post-RNN and all hidden states of
                 # pre-RNN using a feedforward NN
