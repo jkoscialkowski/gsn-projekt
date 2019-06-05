@@ -172,7 +172,6 @@ class AttentionModel(nn.Module):
 
     def forward(self, inputs):
         # Initialize first hidden state for the pre-RNN with zeros
-        hidden_pre = self.init_hidden('pre')
         if self.recurrent_type == 'rnn':
             hidden_pre = self.init_hidden('pre')
             out_pre, _ = self.recurrent_pre(inputs, hidden_pre)
