@@ -3,8 +3,8 @@ import math
 
 """classes"""
 class Train_test_split():
-    def __init__(self, amReader, input_reg = 'ASIA_PACIFIC', pred_reg = 'EMEIA',
-                 int_start = 0, int_end = 10, train_size = 0.8):
+    def __init__(self, amReader, input_reg='ASIA_PACIFIC', pred_reg='EMEIA',
+                 int_start=0, int_end=10, train_size=0.8):
         """
         Class Train_test_split
 
@@ -18,9 +18,9 @@ class Train_test_split():
         int_e = math.floor((int_end - int_start) * train_size + int_start)
         self.amReader = amReader
         self.whole_set = {'train_obs': self.amReader.torch[input_reg][int_start:int_e, :, :],
-                          'train_y': self.amReader.torch[pred_reg][int_start:int_e, 5, 0],
+                          'train_y': self.amReader.torch[pred_reg][int_start:int_e, 5, :],
                           'test_obs': self.amReader.torch[input_reg][int_e:int_end, :, :],
-                          'test_y': self.amReader.torch[pred_reg][int_e:int_end, 5, 0]}
+                          'test_y': self.amReader.torch[pred_reg][int_e:int_end, 5, :]}
 
     def __getitem__(self, item):
         """
