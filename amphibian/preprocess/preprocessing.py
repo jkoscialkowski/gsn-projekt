@@ -142,19 +142,15 @@ class Formatting_y(object):
         train_obs, train_y = whole_set['train_obs'], whole_set['train_y']
         test_obs, test_y = whole_set['test_obs'], whole_set['test_y']
         # training set
-        format_train_y = torch.empty(len(train_y))
+        format_train_y = torch.ones(len(train_y))
         train_y[1:] = (train_y[1:] - train_y[:-1]) / train_y[:-1]
-        format_train_y[train_y > eps_up] = 2
-        format_train_y[train_y < eps_up] = 1
-        format_train_y[train_y < eps_down] = 0
-        format_train_y[0] = 0
+        format_train_y[1:][train_y[1:] > eps_up] = 2
+        format_train_y[1:][train_y[1:] < eps_down] = 0
         # test set
-        format_test_y = torch.empty(len(test_y))
+        format_test_y = torch.ones(len(test_y))
         test_y[1:] = (test_y[1:] - test_y[:-1]) / test_y[:-1]
-        format_test_y[test_y > eps_up] = 2
-        format_test_y[test_y < eps_up] = 1
-        format_test_y[test_y < eps_down] = 0
-        format_test_y[0] = 0
+        format_test_y[1:][test_y[1:] > eps_up] = 2
+        format_test_y[1:][test_y[1:] < eps_down] = 0
 
         return {'train_obs': train_obs, 'train_y': format_train_y,
                 'test_obs': test_obs, 'test_y': format_test_y}
