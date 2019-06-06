@@ -5,6 +5,7 @@ TODO 1: Upgrade Fill_NaN - with averages
 """import modules"""
 import torch
 from torch.utils.data import Dataset
+from numpy import nanmean, nanstd
 
 """classes"""
 class TimeSeriesDataset(Dataset):
@@ -62,29 +63,16 @@ class Fill_NaN(object):
         """
         train_obs, train_y = whole_set['train_obs'], whole_set['train_y']
         test_obs, test_y = whole_set['test_obs'], whole_set['test_y']
+
         # Training set
-        for i in range(train_obs.size(0)):
-            if (torch.isnan(train_y[i])) and (i > 0):
-                train_y[i] = train_y[i - 1]
-            for j in range(train_obs.size(1)):
-                for k in range(train_obs.size(2)):
-                    if (torch.isnan(train_obs[i, j, k])) and (i > 0):
-                        train_obs[i, j, k] = train_obs[i - 1, j, k]
+        train_y[torch.isnan(train_y)] = train_y[:-1][torch.isnan(train_y)[1:]]
+        train_obs[1:, :, :][torch.isnan(train_obs[1:, :, :])] = train_obs[:-1, :, :][torch.isnan(train_obs)[1:, :, :]]
         # first observations in test set
-        if torch.isnan(test_y[0]):
-            test_y[0] = train_y[-1]
-        for j in range(test_obs.size(1)):
-            for k in range(test_obs.size(2)):
-                if torch.isnan(test_obs[0, j, k]):
-                    test_obs[0, j, k] = train_obs[-1, j, k]
+        test_y[torch.isnan(test_y[0])] = train_y[-1]
+        test_obs[0, :, :][torch.isnan(test_obs[0, :, :])] = train_obs[-1, :, :][torch.isnan(test_obs[0, :, :])]
         # Test set
-        for i in range(1, test_obs.size(0)):
-            if torch.isnan(test_y[i]):
-                test_y[i] = test_y[i - 1]
-            for j in range(test_obs.size(1)):
-                for k in range(test_obs.size(2)):
-                    if torch.isnan(train_obs[i, j, k]):
-                        train_obs[i, j, k] = train_obs[i - 1, j, k]
+        test_y[torch.isnan(test_y)] = test_y[:-1][torch.isnan(test_y)[1:]]
+        test_obs[1:, :, :][torch.isnan(test_obs[1:, :, :])] = test_obs[:-1, :, :][torch.isnan(test_obs)[1:, :, :]]
 
         return {'train_obs': train_obs, 'train_y': train_y,
                 'test_obs': test_obs, 'test_y': test_y}
@@ -92,50 +80,38 @@ class Fill_NaN(object):
 class Dummy_Fill_NaN(object):
     def __call__(self, whole_set):
         """
-        Dummy NaN filling
         :param whole_set: set of observations
         :return: set of observations with NaN filled
         """
         train_obs, train_y = whole_set['train_obs'], whole_set['train_y']
         test_obs, test_y = whole_set['test_obs'], whole_set['test_y']
+
         # training set
-        for i in range(train_obs.size(0)):
-            if torch.isnan(train_y[i]):
-                train_y[i] = 0
-            for j in range(train_obs.size(1)):
-                for k in range(train_obs.size(2)):
-                    if torch.isnan(train_obs[i, j, k]):
-                        train_obs[i, j, k] = 0
+        train_y[torch.isnan(train_y)] = 0
+        train_obs[torch.isnan(train_obs)] = 0
         # test set
-        for i in range(test_obs.size(0)):
-            if torch.isnan(test_y[i]):
-                test_y[i] = 0
-            for j in range(test_obs.size(1)):
-                for k in range(test_obs.size(2)):
-                    if torch.isnan(test_obs[i, j, k]):
-                        test_obs[i, j, k] = 0
+        test_y[torch.isnan(test_y)] = 0
+        test_obs[torch.isnan(test_obs)] = 0
 
         return {'train_obs': train_obs, 'train_y': train_y,
                 'test_obs': test_obs, 'test_y': test_y}
 
 class Normalizing(object):
-    def __call__(self, whole_set, eps = 10 ** -3):
+    def __call__(self, whole_set, eps=10 ** -3):
         """
         :param whole_set: set of observarions
         :return: normalized set of observations
         """
         train_obs, train_y = whole_set['train_obs'], whole_set['train_y']
         test_obs, test_y = whole_set['test_obs'], whole_set['test_y']
-        for i in range(train_obs.size(1)):
-            for j in range(train_obs.size(2)):
-                train_obs_mean = torch.mean(train_obs[:, i, j][train_obs[:, i, j] == train_obs[:, i, j]])
-                train_obs_std = torch.std(train_obs[:, i, j][train_obs[:, i, j] == train_obs[:, i, j]])
-                if train_obs_std < eps:
-                    train_obs_std = eps
-                for k in range(train_obs.size(0)):
-                    train_obs[k, i, j] = (train_obs[k, i, j] - train_obs_mean)/train_obs_std
-                for k in range(test_obs.size(0)):
-                    test_obs[k, i, j] = (train_obs[k, i, j] - train_obs_mean)/train_obs_std
+
+        train_obs_mean = torch.tensor(nanmean(train_obs.numpy(), axis=0))
+        train_obs_std = torch.tensor(nanstd(train_obs.numpy(), axis=0))
+        train_obs_std[train_obs_std < eps] = eps
+        # training set
+        train_obs = (train_obs - train_obs_mean)/train_obs_std
+        # test set
+        test_obs = (test_obs - train_obs_mean)/train_obs_std
 
         return {'train_obs': train_obs, 'train_y': train_y,
                 'test_obs': test_obs, 'test_y': test_y}
@@ -148,50 +124,37 @@ class Formatting(object):
         """
         train_obs, train_y = whole_set['train_obs'], whole_set['train_y']
         test_obs, test_y = whole_set['test_obs'], whole_set['test_y']
-        # training set
-        format_train_obs = train_obs[0, :, :].resize(1, train_obs[0, :, :].numel())
-        for i in range(1, train_obs.size(0)):
-            format_train_obs = torch.cat((format_train_obs,
-                                          train_obs[i, :, :].resize(1, train_obs[i, :, :].numel())))
-        # test set
-        format_test_obs = test_obs[0, :, :].resize(1, test_obs[0, :, :].numel())
-        for i in range(1, test_obs.size(0)):
-            format_test_obs = torch.cat((format_test_obs,
-                                         test_obs[i, :, :].resize(1, test_obs[i, :, :].numel())))
+
+        format_train_obs = train_obs.resize(train_obs.size(0), 1, train_obs[0, :, :].numel()).squeeze()
+        format_test_obs = test_obs.resize(test_obs.size(0), 1, test_obs[0, :, :].numel()).squeeze()
 
         return {'train_obs': format_train_obs, 'train_y': train_y,
                 'test_obs': format_test_obs, 'test_y': test_y}
 
 class Formatting_y(object):
-    def __call__(self, whole_set, eps_up = 0.01, eps_down = -0.01):
+    def __call__(self, whole_set, eps_up=0.005, eps_down=-0.005):
         """
         :param whole_set: set of observations
         :param eps_up: threshold for return being regarded as 'up'
         :param eps_down: threshold for return being regarded as 'down'
-        :return: transformed y observarions into three states: 1 - up; 0 - stable; -1 - down
+        :return: transformed y observarions into three states: 2 - up; 1 - stable; 0 - down
         """
         train_obs, train_y = whole_set['train_obs'], whole_set['train_y']
         test_obs, test_y = whole_set['test_obs'], whole_set['test_y']
         # training set
         format_train_y = torch.empty(len(train_y))
+        train_y[1:] = (train_y[1:] - train_y[:-1]) / train_y[:-1]
+        format_train_y[train_y > eps_up] = 2
+        format_train_y[train_y < eps_up] = 1
+        format_train_y[train_y < eps_down] = 0
         format_train_y[0] = 0
-        for i in range(1, len(train_y)):
-            if (train_y[i] - train_y[i - 1]) / train_y[i - 1] > eps_up:
-                format_train_y[i] = 2
-            elif (train_y[i] - train_y[i - 1]) / train_y[i - 1] < eps_down:
-                format_train_y[i] = 0
-            else:
-                format_train_y[i] = 1
         # test set
         format_test_y = torch.empty(len(test_y))
+        test_y[1:] = (test_y[1:] - test_y[:-1]) / test_y[:-1]
+        format_test_y[test_y > eps_up] = 2
+        format_test_y[test_y < eps_up] = 1
+        format_test_y[test_y < eps_down] = 0
         format_test_y[0] = 0
-        for i in range(1, len(test_y)):
-            if (test_y[i] - test_y[i - 1]) / test_y[i - 1] > eps_up:
-                format_test_y[i] = 2
-            elif (test_y[i] - test_y[i - 1]) / test_y[i - 1] < eps_down:
-                format_test_y[i] = 0
-            else:
-                format_test_y[i] = 1
 
         return {'train_obs': train_obs, 'train_y': format_train_y,
                 'test_obs': test_obs, 'test_y': format_test_y}
