@@ -1,49 +1,3 @@
-'''
-Pytania:
-1. Czy processing ma być przeprowadzony na torch
-2. Rozumiem, że można dodawać funkcję w reader.py i ewentualnie jakieś dodatkowe funkcję w preprocessing.py
-3.
-
-Błędy reader.py:
-1. Dlaczego nie wszystkie dataframe są brane pod uwage? - ok, to wynika z dat
-2. Dlaczego nie wybieramy tylko tych dat, które nam odpowiadaja?
-
-Fazy preprocessingu:
-1. dodawania pustych danych jako średnie
-2.
-
-'''
-
-'''
-print(tts['train_obs'].size())
-print(tts['test_obs'].size())
-print(tts['train_y'].size())
-print(tts['test_y'].size())
-'''
-
-#a = np.array([1,2,3])
-#print(a[1:2])
-#print(a.torch["AMERICA"].size())
-#a.torch['AMERICA'].size()
-#format_obs_1 = a.torch['AMERICA'][1, :, :].resize(1, a.torch['AMERICA'][1, :, :].numel())
-#format_obs_1 = torch.cat((format_obs_1, a.torch['AMERICA'][1, :, :].resize(1, a.torch['AMERICA'][1, :, :].numel())))
-#format_obs_1.size()
-'''
-a.torch['AMERICA'][11, 1, 1]
-a.torch['AMERICA'].size()[0]
-len(a.torch['AMERICA'][1, :, 4])
-
-a.torch['AMERICA'][:, 1, :][a.torch['AMERICA'][:, 1, :] != a.torch['AMERICA'][:, 1, :]] =
-len(a.torch['AMERICA'][torch.isnan(a.torch['AMERICA'][:, :, :])])
-torch.cuda.is_available()
-b = AmphibianPreprocess('./data/all_values/stocks/Lodging',
-                    datetime.datetime(2010, 1, 4),
-                    datetime.datetime(2018, 12, 31))
-a.torch['AMERICA'].size()
-
-b.fill_nan()
-torch.isnan(b.torch['AMERICA'][:, 1, 1]).sum()
-'''
 import numpy as np
 from amphibian.fetch.reader import AmphibianReader
 from amphibian.preprocess.train_test_split import Train_test_split
@@ -55,7 +9,8 @@ from torchvision import transforms
 import torch
 from amphibian.architectures import SoftmaxRegressionModel, RNNModel, LSTMModel, AttentionModel
 import warnings
-from numpy import nanmean, nanstd
+from numpy import nanmean, nanstd, floor
+import torch.utils.data as data_utils
 
 '''disable warnings'''
 warnings.filterwarnings('ignore')
@@ -67,13 +22,14 @@ torch.cuda.is_available()
 
 a = AmphibianReader('./data/all_values/stocks/Lodging',
                     datetime.datetime(2012, 1, 10),
-                    datetime.datetime(2018, 12, 30))
+                    datetime.datetime(2018, 1, 30))
 _ = a.read_csvs()
 _ = a.get_unique_dates()
 _ = a.create_torch()
-tts = Train_test_split(a, int_start=5, int_end=500)
-
-batch_size = 100
+a.torch['EMEIA'].size()
+tts = Train_test_split(a, int_start=0, int_end=500, train_size=0.8)
+tts.whole_set['train_y'].size()
+batch_size = 10
 n_neurons = 5
 n_outputs = 3
 n_layers = 1
@@ -81,11 +37,17 @@ n_steps = 4
 ds = TimeSeriesDataset(ttSplit=tts,
                        int_len=n_steps,
                        transform=transforms.Compose([Fill_NaN(),
-                                                     Dummy_Fill_NaN(),
                                                      Normalizing(),
+                                                     Dummy_Fill_NaN(),
                                                      Formatting(),
                                                      Formatting_y()]))
-ds.train_obs
+
+'''
+for item in range(90):
+    print(item % ds.len_train + ds.int_len - 1, int(floor(item / ds.len_train)))
+ds[89]
+'''
+
 dataloader = DataLoader(ds, batch_size=batch_size, shuffle=True, num_workers=4)
 for i_batch, sample_batched in enumerate(dataloader):
     if i_batch == 0:
@@ -95,7 +57,7 @@ for i_batch, sample_batched in enumerate(dataloader):
         model_LSTM = LSTMModel(batch_size, n_steps, sample_batched['train_obs'].size(2), n_neurons, n_outputs,
                  num_layers=1, dropout=0.1)
         model_Attention = AttentionModel(batch_size, n_steps, sample_batched['train_obs'].size(2), n_neurons, n_outputs,
-                 num_layers=1, dropout=0.1, recurrent_type='rnn', alignment='dotprod')
+                 num_layers=1, dropout=0.1, recurrent_type='lstm', alignment='dotprod')
 
         print('softmax')
         print(sample_batched['train_obs'].mean(dim=0).size())
@@ -107,6 +69,7 @@ for i_batch, sample_batched in enumerate(dataloader):
         print("Attention")
         print(model_Attention(sample_batched['train_obs'].permute(1, 0, 2)))
         print(sample_batched['train_y'])
+
 
 """
 Obecny ksztalt: 
@@ -189,3 +152,12 @@ input[1:, :][input[1:, :] == 0] = input[:-1, :][(input == 0)[1:, :]]
 torch.nanmean(srednia)
 
 torch.tensor(nanmean(input.numpy(), axis=0))
+
+test = 'test3'
+if test in ['test', 'test2']:
+    print(1)
+
+
+
+test = torch.zeros(5)
+test
