@@ -78,7 +78,7 @@ class GRUModel(nn.Module):
         :param hidden_size: number of features in the hidden state
         :param n_outputs: number of output values from the fully connected layer
         :param num_layers: number of layers of the RNN
-        :param dropout: dropout probability in the LSTM layer
+        :param dropout: dropout
         """
         super().__init__()
         # Setting parameters
