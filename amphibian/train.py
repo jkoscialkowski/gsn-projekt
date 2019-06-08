@@ -117,8 +117,8 @@ class CrossValidation:
             print('Beginning CV iteration {:d}'.format(it))
             # Sample a set of hyperparameters
             curr_params = {}
-            for k, v in self.param_grid:
-                par = v.rvs()
+            for k, v in self.param_grid.items():
+                par = v.rvs(size=1)[0]
                 curr_params[k] = par
                 self.sampled_params[k].append(par)
             print('Trying for the following parameters: '.
@@ -153,14 +153,15 @@ class CrossValidation:
         return self.summary_df
 
 
-class BatchSizeSampler:
-    """Class for sampling powers of 2
+def batch_size_dist(min, max):
+    """Function for sampling powers of 2
     """
-    def __init__(self, min, max):
-        assert math.log(min, 2).is_integer() and math.log(max, 2).is_integer(),\
-            'Supplied minimum and maximum have to be powers of 2'
-        self.min_pow = math.log(min, 2)
-        self.max_pow = math.log(max, 2)
-
-    def rvs(self, random_state):
-        return 2 ** stats.randint(self.min_pow, self.max_pow).rvs(random_state)
+    assert math.log(min, 2).is_integer() and math.log(max, 2).is_integer(),\
+        'Supplied minimum and maximum have to be powers of 2'
+    min_pow = int(math.log(min, 2))
+    max_pow = int(math.log(max, 2))
+    no = max_pow - min_pow + 1
+    return stats.rv_discrete(
+        values=([2 ** p for p in np.arange(min_pow, max_pow + 1)],
+                [1/no for _ in np.arange(min_pow, max_pow + 1)])
+    )
