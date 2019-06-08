@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
-
+# Set CUDA if available
 if torch.cuda.is_available():
     DEVICE = 'cuda'
 else:
@@ -94,11 +94,15 @@ class Normalizing(object):
         test_obs, test_y = whole_set['test_obs'], whole_set['test_y']
 
         train_obs_mean = torch.tensor(
-            np.nanmean(train_obs.cpu().numpy(), axis=0)
-        ).to(DEVICE)
+            np.nanmean(train_obs.cpu().numpy(), axis=0),
+            requires_grad=False,
+            device=DEVICE
+        )
         train_obs_std = torch.tensor(
-            np.nanstd(train_obs.cpu().numpy(), axis=0)
-        ).to(DEVICE)
+            np.nanstd(train_obs.cpu().numpy(), axis=0),
+            requires_grad=False,
+            device=DEVICE
+        )
         train_obs_std[train_obs_std < eps] = eps
         # training set
         train_obs = (train_obs - train_obs_mean)/train_obs_std
@@ -156,12 +160,18 @@ class FormattingY(object):
         train_obs, train_y = whole_set['train_obs'], whole_set['train_y']
         test_obs, test_y = whole_set['test_obs'], whole_set['test_y']
         # training set
-        format_train_y = torch.ones(train_y.size())
+        format_train_y = torch.ones(train_y.size(),
+                                    requires_grad=False,
+                                    device=DEVICE,
+                                    dtype=torch.long)
         train_y[1:, :] = (train_y[1:, :] - train_y[:-1, :]) / train_y[:-1, :]
         format_train_y[1:, :][train_y[1:, :] > eps_up] = 2
         format_train_y[1:, :][train_y[1:, :] < eps_down] = 0
         # test set
-        format_test_y = torch.ones(test_y.size())
+        format_test_y = torch.ones(test_y.size(),
+                                   requires_grad=False,
+                                   device=DEVICE,
+                                   dtype=torch.long)
         test_y[1:, :] = (test_y[1:, :] - test_y[:-1, :]) / test_y[:-1, :]
         format_test_y[1:, :][test_y[1:, :] > eps_up] = 2
         format_test_y[1:, :][test_y[1:, :] < eps_down] = 0

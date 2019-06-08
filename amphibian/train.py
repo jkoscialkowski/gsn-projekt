@@ -1,16 +1,21 @@
-# TODO 1: Implement random search
-# TODO 2: Look if parameters are passed correctly
-
 import inspect
 import math
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import torch
 import torch.nn as nn
 import torch.optim as optim
 
+from livelossplot import PlotLosses
 from scipy import stats
 from torch.utils.data import DataLoader
+
+# Set CUDA if available
+if torch.cuda.is_available():
+    DEVICE = 'cuda'
+else:
+    DEVICE = 'cpu'
 
 
 class SingleTrainer:
@@ -23,7 +28,7 @@ class SingleTrainer:
         """
         super().__init__()
         # Setting parameters
-        self.model = model
+        self.model = model.to(DEVICE)
         self.batch_size = batch_size
         self.max_epochs = max_epochs
         self.early_stopping_patience = early_stopping_patience
@@ -33,50 +38,74 @@ class SingleTrainer:
         # Optimizer is fixed to Adam
         self.optimizer = optim.Adam(params=self.model.parameters())
 
-    def train(self, train_ds, valid_ds, plot_loss=True):
-        train_dl = DataLoader(train_ds, batch_size=int(self.batch_size),
-                              shuffle=True, num_workers=8, drop_last=True)
-        test_dl = DataLoader(valid_ds, batch_size=int(self.batch_size),
-                             num_workers=True, drop_last=True)
-        losses = []
+    def train(self, train_ds, valid_ds, plot_loss=True, verbose=True):
+        # Define DataLoaders
+        train_dl = DataLoader(train_ds, batch_size=self.batch_size,
+                              shuffle=True, drop_last=True)
+        test_dl = DataLoader(valid_ds, batch_size=self.batch_size,
+                             drop_last=True)
+
+        losses = {'train_loss': [], 'valid_loss': []}
+
+        if plot_loss:
+            liveloss = PlotLosses()
         for epoch in range(self.max_epochs):
-            losses.append({'train_loss': [], 'valid_loss': []})
+            if verbose:
+                print('Starting epoch {}'.format(epoch))
+            epoch_loss = []
             for idx_batch, batch in enumerate(train_dl):
                 # Switch to training mode
                 self.model.train()
                 self.optimizer.zero_grad()
-                out = self.model(batch['train_obs'].permute(1,0,2))
-                tr_loss = self.loss(out, batch['train_y'])
-                losses[epoch]['train_loss'].append(tr_loss.item())
+                out = self.model(batch['train_obs'].permute(1, 0 ,2))
+                tr_loss = self.loss(out, batch['train_y'].to(DEVICE))
+                epoch_loss.append(tr_loss.item())
                 tr_loss.backward()
                 self.optimizer.step()
-                # Switch to evaluation mode
-                self.model.eval()
-                # Compute validation loss by iterating through valid dl batches
+
+            # Switch to evaluation mode
+            self.model.eval()
+
+            # Compute training loss for the epoch
+            losses['train_loss'].append(sum(epoch_loss) / len(train_dl))
+
+            # Compute validation loss by iterating through valid dl batches
+            with torch.no_grad():
                 val_loss = []
                 for idx_v_batch, v_batch in enumerate(test_dl):
                     val_loss.append(self.loss(
-                        self.model(v_batch['test_obs']),
+                        self.model(v_batch['test_obs'].permute(1, 0, 2)),
                         v_batch['test_y']
-                    ) * self.batch_size)
-                val_loss = sum(val_loss) / len(test_dl)
-                losses[epoch]['valid_loss'].append(val_loss)
-                if self.early_stopping_patience:
-                    es_threshold = max(losses[epoch]['valid_loss'][
-                        (idx_batch-self.early_stopping_patience):idx_batch
-                    ])
-                    if val_loss > es_threshold:
-                        break
+                    ).item())
+                losses['valid_loss'].append(sum(val_loss) / len(test_dl))
+
+            # Printing loss for a given epoch
+            if verbose:
+                print('Loss: {}'.format(losses['valid_loss'][epoch]))
             # Plot loss after each epoch if the user chose to
             if plot_loss:
-                epoch_train_losses = [np.mean(l['train_loss']) for l in losses]
-                epoch_valid_losses = [np.mean(l['valid_loss']) for l in losses]
-                plt.plot(x=range(epoch), y=epoch_train_losses,
-                         label='Training loss')
-                plt.plot(x=range(epoch), y=epoch_valid_losses,
-                         label='Validation loss')
-                plt.legend(loc='upper right')
-                plt.show()
+                logs = {
+                    'log_loss': losses['train_loss'][epoch],
+                    'val_log_loss': losses['valid_loss'][epoch]
+                }
+
+                liveloss.update(logs)
+                liveloss.draw()
+
+            # Early stopping
+            if self.early_stopping_patience:
+                lag_1 = losses['valid_loss'][
+                    (epoch - self.early_stopping_patience):epoch
+                ]
+                lag_2 = losses['valid_loss'][
+                    (epoch - self.early_stopping_patience - 1):(epoch - 1)
+                ]
+                no_drops = sum(True if l1 < l2
+                               else False
+                               for l1, l2 in zip(lag_1, lag_2))
+                if epoch > self.early_stopping_patience and no_drops == 0:
+                    break
+
         # Save last loss
         self.final_loss = np.mean(losses[-1]['valid_loss'])
         self.last_epoch = epoch
