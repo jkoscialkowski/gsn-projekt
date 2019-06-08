@@ -19,7 +19,7 @@ else:
 
 
 class SingleTrainer:
-    def __init__(self, model, batch_size, max_epochs=500,
+    def __init__(self, model, batch_size, learning_rate=1e-3, max_epochs=500,
                  early_stopping_patience=None):
         """
         Class SingleTrainer -
@@ -36,7 +36,8 @@ class SingleTrainer:
         # Loss is fixed to nn.CrossEntropyLoss
         self.loss = nn.CrossEntropyLoss()
         # Optimizer is fixed to Adam
-        self.optimizer = optim.Adam(params=self.model.parameters())
+        self.optimizer = optim.Adam(params=self.model.parameters(),
+                                    lr=learning_rate)
 
     def train(self, train_ds, valid_ds, plot_loss=True, verbose=True):
         # Define DataLoaders
