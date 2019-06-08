@@ -4,7 +4,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-# Transform data in the right dimension, (seq_len X batch_size X input_size)!
+# Set CUDA if available
+if torch.cuda.is_available():
+    DEVICE = 'cuda'
+else:
+    DEVICE = 'cpu'
 
 
 class SoftmaxRegressionModel(nn.Module):
@@ -60,7 +64,8 @@ class RNNModel(nn.Module):
         self.fc = nn.Linear(self.hidden_size, self.n_outputs)
 
     def init_hidden(self):
-        return torch.zeros(self.num_layers, self.batch_size, self.hidden_size)
+        return torch.zeros(self.num_layers, self.batch_size, self.hidden_size,
+                           requires_grad=False, device=DEVICE)
 
     def forward(self, X):
         hidden = self.init_hidden()
@@ -97,7 +102,8 @@ class GRUModel(nn.Module):
         self.fc = nn.Linear(self.hidden_size, self.n_outputs)
 
     def init_hidden(self):
-        return torch.zeros(self.num_layers, self.batch_size, self.hidden_size)
+        return torch.zeros(self.num_layers, self.batch_size, self.hidden_size,
+                           requires_grad=False, device=DEVICE)
 
     def forward(self, X):
         hidden = self.init_hidden()
@@ -135,8 +141,10 @@ class LSTMModel(nn.Module):
         self.fc = nn.Linear(self.hidden_size, self.n_outputs)
 
     def init_hidden(self):
-        return (torch.zeros(self.num_layers, self.batch_size, self.hidden_size),
-                torch.zeros(self.num_layers, self.batch_size, self.hidden_size))
+        return (torch.zeros(self.num_layers, self.batch_size, self.hidden_size,
+                            requires_grad=False, device=DEVICE),
+                torch.zeros(self.num_layers, self.batch_size, self.hidden_size,
+                            requires_grad=False, device=DEVICE))
 
     def forward(self, X):
         hidden = self.init_hidden()
@@ -215,7 +223,7 @@ class AttentionModel(nn.Module):
             dims = self.num_layers, self.batch_size, self.hidden_size
         elif which == 'post':
             dims = self.batch_size, self.hidden_size
-        return torch.zeros(*dims)
+        return torch.zeros(*dims, requires_grad=False, device=DEVICE)
 
     def forward(self, X):
         # Initialize first hidden state for the pre-RNN with zeros
