@@ -76,10 +76,9 @@ class SingleTrainer:
         self.last_epoch = epoch
 
 
-
 class CrossValidation:
     def __init__(self, architecture, param_grid: dict, n_iter=100, folds=5):
-        """
+        """Class hyperparameter optimisation by random search and k-fold CV
 
         :param architecture: One of the implemented NN architectures.
         :param param_grid: Has to reflect parameters which can be used by the architecture.
@@ -152,8 +151,6 @@ class CrossValidation:
             axis=1
         )
         return self.summary_df
-
-
 
 
 class BatchSizeSampler:
