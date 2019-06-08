@@ -6,6 +6,7 @@ import torch.nn.functional as F
 
 # Transform data in the right dimension, (seq_len X batch_size X input_size)!
 
+
 class SoftmaxRegressionModel(nn.Module):
     def __init__(self, batch_size, input_size, n_outputs):
         """
@@ -29,6 +30,7 @@ class SoftmaxRegressionModel(nn.Module):
         X = X.view(self.batch_size, self.input_size)
         out = self.fc(X)
         return out
+
 
 class RNNModel(nn.Module):
     def __init__(self, batch_size, seq_len, input_size, hidden_size, n_outputs,
@@ -170,15 +172,15 @@ class AttentionModel(nn.Module):
             dims = self.batch_size, self.hidden_size
         return torch.zeros(*dims)
 
-    def forward(self, inputs):
+    def forward(self, X):
         # Initialize first hidden state for the pre-RNN with zeros
         if self.recurrent_type == 'rnn':
             hidden_pre = self.init_hidden('pre')
-            out_pre, _ = self.recurrent_pre(inputs, hidden_pre)
+            out_pre, _ = self.recurrent_pre(X, hidden_pre)
         elif self.recurrent_type == 'lstm':
             hidden_pre, state_pre = (self.init_hidden('pre'),
                                      self.init_hidden('pre'))
-            out_pre, _ = self.recurrent_pre(inputs, (hidden_pre, state_pre))
+            out_pre, _ = self.recurrent_pre(X, (hidden_pre, state_pre))
 
         # Initialize input to post-RNN with zeros
         hidden_post = self.init_hidden('post')
