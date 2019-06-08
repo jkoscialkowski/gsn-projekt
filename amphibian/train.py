@@ -29,31 +29,37 @@ class SingleTrainer:
         self.early_stopping_patience = early_stopping_patience
 
         # Loss is fixed to nn.CrossEntropyLoss
-        self.results = nn.CrossEntropyLoss()
+        self.loss = nn.CrossEntropyLoss()
         # Optimizer is fixed to Adam
-        self.optimizer = optim.Adam(params=model.parameters())
+        self.optimizer = optim.Adam(params=self.model.parameters())
 
     def train(self, train_ds, valid_ds, plot_loss=True):
-        dl = DataLoader(train_ds, batch_size=self.batch_size,
-                        shuffle=True, num_workers=8)
+        train_dl = DataLoader(train_ds, batch_size=int(self.batch_size),
+                              shuffle=True, num_workers=8, drop_last=True)
+        test_dl = DataLoader(valid_ds, batch_size=int(self.batch_size),
+                             num_workers=True, drop_last=True)
         losses = []
         for epoch in range(self.max_epochs):
             losses.append({'train_loss': [], 'valid_loss': []})
-            for idx_batch, batch in enumerate(dl):
+            for idx_batch, batch in enumerate(train_dl):
                 # Switch to training mode
                 self.model.train()
                 self.optimizer.zero_grad()
-                out = self.model(batch['observations'].permute(1,0,2))
-                tr_loss = self.results(out, batch['y'])
+                out = self.model(batch['train_obs'].permute(1,0,2))
+                tr_loss = self.loss(out, batch['train_y'])
                 losses[epoch]['train_loss'].append(tr_loss.item())
                 tr_loss.backward()
                 self.optimizer.step()
                 # Switch to evaluation mode
                 self.model.eval()
-                val_loss = self.results(
-                    self.model(valid_ds.observations),
-                    valid_ds.y
-                )
+                # Compute validation loss by iterating through valid dl batches
+                val_loss = []
+                for idx_v_batch, v_batch in enumerate(test_dl):
+                    val_loss.append(self.loss(
+                        self.model(v_batch['test_obs']),
+                        v_batch['test_y']
+                    ) * self.batch_size)
+                val_loss = sum(val_loss) / len(test_dl)
                 losses[epoch]['valid_loss'].append(val_loss)
                 if self.early_stopping_patience:
                     es_threshold = max(losses[epoch]['valid_loss'][
