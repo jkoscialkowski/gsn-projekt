@@ -1,7 +1,7 @@
 import numpy as np
 from amphibian.fetch.reader import AmphibianReader
-from amphibian.preprocess.train_test_split import Train_test_split
-from amphibian.preprocess.preprocessing import TimeSeriesDataset, Fill_NaN, Normalizing, Dummy_Fill_NaN, Formatting, Formatting_y
+from amphibian.preprocess.train_test_split import TrainTestSplit
+from amphibian.preprocess.preprocessing import TimeSeriesDataset, FillNaN, Normalizing, DummyFillNaN, Formatting, FormattingY
 import datetime
 import pandas as pd
 from torch.utils.data import DataLoader
@@ -27,20 +27,20 @@ _ = a.read_csvs()
 _ = a.get_unique_dates()
 _ = a.create_torch()
 a.torch['EMEIA'].size()
-tts = Train_test_split(a, int_start=0, int_end=500, train_size=0.8)
+tts = TrainTestSplit(a, int_start=0, int_end=500, train_size=0.8)
 tts.whole_set['train_y'].size()
 batch_size = 10
 n_neurons = 5
 n_outputs = 3
 n_layers = 1
 n_steps = 4
-ds = TimeSeriesDataset(ttSplit=tts,
+ds = TimeSeriesDataset(tt_split=tts,
                        int_len=n_steps,
-                       transform=transforms.Compose([Fill_NaN(),
+                       transform=transforms.Compose([FillNaN(),
                                                      Normalizing(),
-                                                     Dummy_Fill_NaN(),
+                                                     DummyFillNaN(),
                                                      Formatting(),
-                                                     Formatting_y()]))
+                                                     FormattingY()]))
 
 '''
 for item in range(90):
