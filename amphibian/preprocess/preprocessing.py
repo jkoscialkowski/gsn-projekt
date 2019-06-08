@@ -1,15 +1,10 @@
-"""
-TODO 1: Upgrade Fill_NaN - with averages
-"""
-
-"""import modules"""
 import torch
 from torch.utils.data import Dataset
 from numpy import nanmean, nanstd, floor
 
-"""classes"""
+
 class TimeSeriesDataset(Dataset):
-    def __init__(self, ttSplit, int_len=5, transform=None):
+    def __init__(self, tt_split, int_len=5, transform=None):
         """
         Class TimeSeriesDataset
 
@@ -20,7 +15,7 @@ class TimeSeriesDataset(Dataset):
         :param transform: sequence of transformations, default: None
         """
         self.transform = transform
-        self.whole_set = ttSplit
+        self.whole_set = tt_split
         self.int_len = int_len
 
         if self.transform:
@@ -46,7 +41,8 @@ class TimeSeriesDataset(Dataset):
 
         return sample
 
-class Fill_NaN(object):
+
+class FillNaN(object):
     def __call__(self, whole_set):
         """
         :param whole_set: set of observations
@@ -68,6 +64,7 @@ class Fill_NaN(object):
         return {'train_obs': train_obs, 'train_y': train_y,
                 'test_obs': test_obs, 'test_y': test_y}
 
+
 class Normalizing(object):
     def __call__(self, whole_set, eps=10 ** -3):
         """
@@ -88,7 +85,8 @@ class Normalizing(object):
         return {'train_obs': train_obs, 'train_y': train_y,
                 'test_obs': test_obs, 'test_y': test_y}
 
-class Dummy_Fill_NaN(object):
+
+class DummyFillNaN(object):
     def __call__(self, whole_set):
         """
         :param whole_set: set of observations
@@ -107,6 +105,7 @@ class Dummy_Fill_NaN(object):
         return {'train_obs': train_obs, 'train_y': train_y,
                 'test_obs': test_obs, 'test_y': test_y}
 
+
 class Formatting(object):
     def __call__(self, whole_set):
         """
@@ -122,7 +121,8 @@ class Formatting(object):
         return {'train_obs': format_train_obs, 'train_y': train_y,
                 'test_obs': format_test_obs, 'test_y': test_y}
 
-class Formatting_y(object):
+
+class FormattingY(object):
     def __call__(self, whole_set, eps_up=0.005, eps_down=-0.005):
         """
         :param whole_set: set of observations
@@ -145,4 +145,3 @@ class Formatting_y(object):
 
         return {'train_obs': train_obs, 'train_y': format_train_y,
                 'test_obs': test_obs, 'test_y': format_test_y}
-
