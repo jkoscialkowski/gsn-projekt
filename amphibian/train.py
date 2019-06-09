@@ -7,9 +7,14 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
+from datetime import datetime
 from livelossplot import PlotLosses
 from scipy import stats
 from torch.utils.data import DataLoader
+from torchvision import transforms
+
+import amphibian.preprocess.preprocessing as preproc
+from amphibian.preprocess.train_test_split import TrainTestSplit
 
 # Set CUDA if available
 if torch.cuda.is_available():
@@ -17,9 +22,19 @@ if torch.cuda.is_available():
 else:
     DEVICE = 'cpu'
 
+# Set implemented SingleTrainer parameters which can be passed to CV
+IMPLEMENTED_ARCHITECTURES = [
+    'SoftmaxRegressionModel', 'RNNModel', 'GRUModel', 'AttentionModel'
+]
+NON_MODEL_PARAMETERS = [
+    'learning_rate',
+    'max_epochs',
+    'early_stopping_patience'
+]
+
 
 class SingleTrainer:
-    def __init__(self, model, batch_size, max_epochs=500,
+    def __init__(self, model, batch_size, learning_rate=1e-3, max_epochs=500,
                  early_stopping_patience=None):
         """
         Class SingleTrainer -
@@ -36,7 +51,8 @@ class SingleTrainer:
         # Loss is fixed to nn.CrossEntropyLoss
         self.loss = nn.CrossEntropyLoss()
         # Optimizer is fixed to Adam
-        self.optimizer = optim.Adam(params=self.model.parameters())
+        self.optimizer = optim.Adam(params=self.model.parameters(),
+                                    lr=learning_rate)
 
     def train(self, train_ds, valid_ds, plot_loss=True, verbose=True):
         # Define DataLoaders
@@ -51,7 +67,7 @@ class SingleTrainer:
             liveloss = PlotLosses()
         for epoch in range(self.max_epochs):
             if verbose:
-                print('Starting epoch {}'.format(epoch))
+                print('Starting epoch {}'.format(epoch + 1))
             epoch_loss = []
             for idx_batch, batch in enumerate(train_dl):
                 # Switch to training mode
@@ -107,12 +123,14 @@ class SingleTrainer:
                     break
 
         # Save last loss
-        self.final_loss = np.mean(losses[-1]['valid_loss'])
+        self.final_loss = np.mean(losses['valid_loss'][-1])
         self.last_epoch = epoch
 
 
 class CrossValidation:
-    def __init__(self, architecture, param_grid: dict, n_iter=100, folds=5):
+    def __init__(self, am_reader, int_start, int_end, architecture,
+                 sampled_param_grid: dict, constant_param_grid: dict,
+                 log_path, n_iter=100, folds=5):
         """Class hyperparameter optimisation by random search and k-fold CV
 
         :param architecture: One of the implemented NN architectures.
@@ -120,15 +138,20 @@ class CrossValidation:
         :param n_iter:
         :param folds:
         """
-        assert architecture in [name for name, obj in inspect.getmembers(
-            'amphibian.architectures'
-        )], 'Chosen architecture is not implemented'
+        assert architecture in IMPLEMENTED_ARCHITECTURES, \
+            'Chosen architecture is not implemented'
+        self.am_reader = am_reader
+        self.int_start = int_start
+        self.int_end = int_end
         self.architecture = architecture
-        self.param_grid = param_grid
+        self.sampled_param_grid = sampled_param_grid
+        self.constant_param_grid = constant_param_grid
+        self.log_path = log_path \
+            + '/cv_log_{:%Y%m%d_%H%M%S}.csv'.format(datetime.now())
         self.n_iter = n_iter
         self.folds = folds
         # Dictionary for sampled parameters
-        self.sampled_params = {k: [] for k in param_grid.keys()}
+        self.sampled_params = {k: [] for k in sampled_param_grid.keys()}
         # Lists for metric statistics and numbers of epochs
         self.results = {'metric_mean': [],
                         'metric_std': [],
@@ -149,42 +172,83 @@ class CrossValidation:
         print('STARTED CROSS-VALIDATION')
         print('Optimizing hyperparameters for {}'.format(self.architecture))
         for it in range(self.n_iter):
-            print('Beginning CV iteration {:d}'.format(it))
-            # Sample a set of hyperparameters
-            curr_params = {}
-            for k, v in self.param_grid.items():
+            print('Beginning CV iteration {:d}'.format(it + 1))
+
+            # Sample parameters
+            sampled_params = {}
+            for k, v in self.sampled_param_grid.items():
                 par = v.rvs(size=1)[0]
-                curr_params[k] = par
+                if par.dtype == float:
+                    sampled_params[k] = float(par)
+                else:
+                    sampled_params[k] = int(par)
                 self.sampled_params[k].append(par)
-            print('Trying for the following parameters: '.
-                  format(str(curr_params)))
-            # List for one-fold losses
-            fold_losses = []
-            # List for last epochs
-            last_epochs = []
+            print('Trying for the following parameters: {}'.
+                  format(str(sampled_params)))
+            # Concatenate sampled and constant parameters
+            model_params = {**sampled_params, **self.constant_param_grid}
+            # Extract parameters for SingleTrainer
+            st_params = {p: model_params.pop(p)
+                         for p in NON_MODEL_PARAMETERS}
+
+            # Lists for one-fold losses and epoch numbers before early stopping
+            fold_losses, last_epochs = [], []
+
+            # Beginnings and ends for cross-validation intervals
+            # One interval is supposed to occupy half of the training set
+            # and roll through its entirety
+            interval = self.int_end - self.int_end
+            delta = np.floor(interval / 2 / (self.folds - 1))
+            int_starts = [int(self.int_start + delta * f)
+                          for f in range(self.folds)]
+            int_ends = [int(self.int_end - delta * (self.folds - f - 1))
+                        for f in range(self.folds)]
+
+            # Iterate over folds
             for fold in range(self.folds):
-                print('\tFold: {:d}'.format(fold))
+                print('\tFold: {:d}'.format(fold + 1))
+
+                # Get train test split for selected part of the training set
+                train_test_split = TrainTestSplit(self.am_reader,
+                                                  int_start=int_starts[fold],
+                                                  int_end=int_ends[fold])
+                # Prepare dataset
+                tsds = preproc.TimeSeriesDataset(
+                    train_test_split, int_len=model_params['seq_len'],
+                    transform=transforms.Compose([
+                        preproc.FillNaN(), preproc.Normalizing(),
+                        preproc.DummyFillNaN(), preproc.Formatting(),
+                        preproc.FormattingY()
+                    ])
+                )
+                vds = preproc.ValidDataset(tsds)
+
+                # Create new instance of model object
                 architecture = self.get_class(
-                    'amphibian.architectures' + self.architecture
-                )(**curr_params)
+                    'amphibian.architectures.' + self.architecture
+                )(**model_params)
+                # Create new instance of SingleTrainer and begin training
                 st = SingleTrainer(model=architecture,
-                                   batch_size=curr_params['batch_size'])
-                st.train(train_ds=2, valid_ds=2, plot_loss=False)
+                                   batch_size=model_params['batch_size'],
+                                   **st_params)
+                st.train(train_ds=tsds, valid_ds=vds, plot_loss=False)
                 last_epochs.append(st.last_epoch)
-                print('\tFitting ended after {:d} epochs'.format(st.last_epoch))
+                print('\tFitting ended after {:d} epochs'.format(st.last_epoch + 1))
                 fold_losses.append(st.final_loss)
                 print('\tLoss on this fold: {:.5f}'.format(st.final_loss))
-            # Summarising computed metrics for a given choice of parameters
+
+            # Summarise computed metrics for a given choice of parameters
             self.results['metric_mean'].append(np.mean(fold_losses))
             self.results['metric_std'].append(np.std(fold_losses))
             self.results['metric_min'].append(min(fold_losses))
             self.results['metric_max'].append(max(fold_losses))
             self.results['no_epochs'].append(last_epochs)
-        self.summary_df = pd.concat(
-            [pd.DataFrame(self.sampled_params),
-             pd.DataFrame(self.results)],
-            axis=1
-        )
+            self.summary_df = pd.concat(
+                [pd.DataFrame(self.sampled_params),
+                 pd.DataFrame(self.results)],
+                axis=1
+            )
+            self.summary_df.to_csv(self.log_path)
         return self.summary_df
 
 

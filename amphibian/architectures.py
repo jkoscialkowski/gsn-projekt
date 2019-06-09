@@ -12,11 +12,12 @@ else:
 
 
 class SoftmaxRegressionModel(nn.Module):
-    def __init__(self, batch_size, input_size, n_outputs):
+    def __init__(self, batch_size, seq_len, input_size, n_outputs):
         """
         Class SoftmaxRegressionModel - implementation of Softmax Regression Model
 
         :param batch_size: size of the batch
+        :param seq_len: only for compatibility with training classes
         :param input_size: size of input
         :param n_outputs: size of output
         """
