@@ -156,7 +156,7 @@ class LSTMModel(nn.Module):
 
 class AttentionModel(nn.Module):
     def __init__(self, batch_size, seq_len, input_size, hidden_size, n_outputs,
-                 num_layers=1, dropout=0.1, recurrent_type='rnn', alignment='dotprod'):
+                 num_layers=1, dropout=0.1, recurrent_type='rnn', alignment='dotprod', additional_layer = ''):
         """
         Class AttentionModel - implementation of simple Attention architecture
 

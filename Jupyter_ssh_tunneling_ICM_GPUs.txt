@@ -8,7 +8,7 @@ virtualenv -p python3 pytorch
 pip3 install https://download.pytorch.org/whl/cu100/torch-1.0.1.post2-cp36-cp36m-linux_x86_64.whl
 pip3 install torchvision
 export myport=12345
-echo "ssh -NL $myport:$(hostname):$myport LOGIN@rysy"    ### Copy and save output
+echo "ssh -NL $myport:$(hostname):$myport LOGIN@rysy"    ### Copy and save output - ssh -NL 12345:rysy-n4.icm.edu.pl:12345 mj345161@rysy
 export XDG_RUNTIME_DIR=""
 jupyter-notebook --no-browser --port=$myport --ip='0.0.0.0'
 
