@@ -10,7 +10,7 @@ BNP.SG,BNP PARIBAS S.A. Actions Port.,STU,banking,Germany
 BAC,Bank of America,NYQ,banking,USA
 ACA.PA,Crédit Agricole S.A.,PAR,banking,France
 C,Citigroup Inc.,NYQ,banking,USA
-7182.T,Japan Post Bank,JPX,banking,Japan
+600000.SS,"Shanghai Pudong Development Bank Co., Ltd.",SSE,banking,China
 WFC,Wells Fargo & Co.,NYQ,banking,USA
 8316.T,Sumitomo Mitsui Financial Group  Inc.,JPX,banking,Japan
 DBK.DE,Deutsche Bank Aktiengesellschaft,GER,banking,Germany
@@ -19,7 +19,7 @@ SAN.MC,Banco Santander,MCE,banking,Spain
 BARC.L,Barclays PLC,LSE,banking,United Kingdom
 GLE.PA,Société Générale Société anonyme,PAR,banking,France
 3328.HK,Bank of Communications,HKG,banking,China
-1658.HK,Postal Savings Bank of China,HKG,banking,China
+1988.HK,"China Minsheng Banking Corp., Ltd.",HKG,banking,China
 LLOY.L,Lloyds Banking Group,LSE,banking,United Kingdom
 RY,Royal Bank of Canada,NYQ,banking,USA
 TD,Toronto-Dominion Bank,NYQ,banking,USA
