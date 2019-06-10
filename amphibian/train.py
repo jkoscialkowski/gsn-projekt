@@ -228,7 +228,7 @@ class CrossValidation:
             # Beginnings and ends for cross-validation intervals
             # One interval is supposed to occupy half of the training set
             # and roll through its entirety
-            interval = self.int_end - self.int_end
+            interval = self.int_end - self.int_start
             delta = np.floor(interval / 2 / (self.folds - 1))
             int_starts = [int(self.int_start + delta * f)
                           for f in range(self.folds)]
