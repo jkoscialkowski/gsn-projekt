@@ -2,9 +2,13 @@ import matplotlib.font_manager as fm
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
+import torch
+import torch.nn as nn
 
 from matplotlib.collections import QuadMesh
+from torch.utils.data import DataLoader
 
+NO_COMPANIES = 10
 
 class ConfusionMatrix:
     def __init__(self, confmat, class_labels, truth_along_y=True,
@@ -58,7 +62,7 @@ class ConfusionMatrix:
         size = self.confmat.shape[0]
         text_kwargs = dict(color='w', ha="center", va="center", gid='sum',
                            fontproperties=fm.FontProperties(weight='bold',
-                                                            size=12))
+                                                            size=20))
         row, col = int(pos[1]), int(pos[0])
         if row == col and row == size:
             return [
@@ -85,10 +89,10 @@ class ConfusionMatrix:
                          int(self.confmat_augmented[row, col])),
                      'kw': text_kwargs}]
 
-    def plot(self):
+    def plot(self, fontsize):
         # The first argument is for always plotting in the same window
         fig, ax1 = self.create_new_fig('Conf matrix default', self.figsize)
-        ax1.set_title('Confusion matrix')
+        ax1.set_title('Confusion matrix', fontsize=fontsize)
 
         # Add precision, recall and accuracy
         if not hasattr(self, 'confmat_augmented'):
@@ -96,7 +100,7 @@ class ConfusionMatrix:
 
         # Create Seaborn heatmap
         ax = sns.heatmap(self.confmat_augmented, annot=True,
-                         annot_kws={"size": 12}, linewidths=0.5, ax=ax1,
+                         annot_kws={"fontsize": 20}, linewidths=0.5, ax=ax1,
                          cbar=False, cmap='Oranges', linecolor='w', fmt='.2f')
 
         # Move xaxis ticks to top
@@ -107,16 +111,16 @@ class ConfusionMatrix:
         rec_ticks = self.class_labels + ['Recall']
         prec_ticks = self.class_labels + ['Precision']
         if self.truth_along_y:
-            ax.set_xlabel('Predicted')
-            ax.set_ylabel('Actual')
-            ax.set_xticklabels(prec_ticks, rotation=45, fontsize=12)
-            ax.set_yticklabels(rec_ticks, rotation=25, fontsize=12)
+            ax.set_xlabel('Predicted', fontsize=fontsize)
+            ax.set_ylabel('Actual', fontsize=fontsize)
+            ax.set_xticklabels(prec_ticks, rotation=45, fontsize=fontsize)
+            ax.set_yticklabels(rec_ticks, rotation=25, fontsize=fontsize)
 
         else:
-            ax.set_xlabel('Actual')
-            ax.set_ylabel('Predicted')
-            ax.set_xticklabels(rec_ticks, rotation=45, fontsize=12)
-            ax.set_yticklabels(prec_ticks, rotation=25, fontsize=12)
+            ax.set_xlabel('Actual', fontsize=fontsize)
+            ax.set_ylabel('Predicted', fontsize=fontsize)
+            ax.set_xticklabels(rec_ticks, rotation=45, fontsize=fontsize)
+            ax.set_yticklabels(prec_ticks, rotation=25, fontsize=fontsize)
 
         plt.tight_layout()  # Set tight layout
 
@@ -154,5 +158,46 @@ class ConfusionMatrix:
 
 
 class MAVI:
-    def __init__(self):
+    def __init__(self, model, valid_dataset):
+        self.model = model
+        self.loss_fn = nn.CrossEntropyLoss()
+        self.model.eval()
+        self.nobs = int(len(valid_dataset) / NO_COMPANIES)
+        self.dataloader = DataLoader(valid_dataset,
+                                     batch_size=self.nobs,
+                                     drop_last=True)
+        self.loss_dict = {}
+        self.perm_loss_dict = {}
+
+    @staticmethod
+    def permute_company(tensor: torch.Tensor, company_no: int):
+        shuffle_list = [company_no + i * NO_COMPANIES for i in range(6)]
+        shuffled = tensor.clone()
+        shuffled[:, :, shuffle_list] = shuffled[torch.randperm(tensor.shape[0]),
+                                                torch.randperm(tensor.shape[1]),
+                                                shuffle_list]
+        return shuffled
+
+    def compute_losses(self):
+        with torch.no_grad():
+            for company_no, batch in enumerate(self.dataloader):
+                self.loss_dict[company_no] = self.loss_fn(
+                    self.model(batch['test_obs'].permute(1, 0, 2)),
+                    batch['test_y']
+                ).item()
+
+                # Compute permutational losses for a given company
+                self.perm_loss_dict[company_no] = {}
+
+                for perm_comp in range(NO_COMPANIES):
+                    self.perm_loss_dict[company_no][perm_comp] = self.loss_fn(
+                        self.model(self.permute_company(
+                            batch['test_obs'].permute(1, 0, 2)
+                        )),
+                        batch['test_y']
+                    ).item()
+
+    def plot_mavi(self, company_no):
         pass
+
+# TODO 1: Finish MAVI plotting
