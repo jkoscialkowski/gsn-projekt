@@ -103,7 +103,7 @@ print(loss)
 w powyzszego wynika, ze 
 '''
 
-
+'''
 linear = torch.nn.Linear(10, 3)
 
 input_size = 4
@@ -161,3 +161,4 @@ if test in ['test', 'test2']:
 
 test = torch.zeros(5)
 test
+'''
