@@ -17,10 +17,10 @@ pip install -r requirements.txt
 
 Afterwards run  
 ```bash
-python3 downloader.py -T banking -R REGION -B banking
+python3 amphibian/fetch/downloader.py -T banking -R REGION -B banking
 ```
 to download the data. You need to substitute REGION with all of the
-following, one-by-one: ASIA-PACIFIC, EMEIA, AMERICA.
+following, one-by-one: ASIA_PACIFIC, EMEIA, AMERICA.
 
 Finally, you can run one of the `main*.py` files to start cross-validation.
 For example to train the Attention network run

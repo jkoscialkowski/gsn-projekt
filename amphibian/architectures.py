@@ -28,12 +28,12 @@ class SoftmaxRegressionModel(nn.Module):
         for arg, val in values.items():
             setattr(self, arg, val)
 
-        self.fc = nn.Linear(in_features=self.input_size,
+        self.fc = nn.Linear(in_features=self.input_size * self.seq_len,
                             out_features=self.n_outputs)
 
     def forward(self, X):
-        X = X.view(-1, self.input_size)
-        out = self.fc(X)
+        flattened = X.contiguous().view(-1, self.input_size * self.seq_len)
+        out = self.fc(flattened)
         return out
 
 

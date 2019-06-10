@@ -22,7 +22,8 @@ else:
 
 # Set implemented SingleTrainer parameters which can be passed to CV
 IMPLEMENTED_ARCHITECTURES = [
-    'SoftmaxRegressionModel', 'RNNModel', 'GRUModel', 'AttentionModel'
+    'SoftmaxRegressionModel', 'RNNModel', 'GRUModel', 'LSTMModel',
+    'AttentionModel'
 ]
 NON_MODEL_PARAMETERS = [
     'learning_rate',
