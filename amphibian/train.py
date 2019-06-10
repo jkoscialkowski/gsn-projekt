@@ -1,6 +1,4 @@
-import inspect
 import math
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import torch
@@ -54,7 +52,8 @@ class SingleTrainer:
         self.optimizer = optim.Adam(params=self.model.parameters(),
                                     lr=learning_rate)
 
-    def train(self, train_ds, valid_ds, plot_loss=True, verbose=True):
+    def train(self, train_ds, valid_ds, plot_loss=True, verbose=True,
+              save_path=None):
         # Define DataLoaders
         train_dl = DataLoader(train_ds, batch_size=self.batch_size,
                               shuffle=True, drop_last=True)
@@ -73,7 +72,7 @@ class SingleTrainer:
                 # Switch to training mode
                 self.model.train()
                 self.optimizer.zero_grad()
-                out = self.model(batch['train_obs'].permute(1, 0 ,2))
+                out = self.model(batch['train_obs'].permute(1, 0, 2))
                 tr_loss = self.loss(out, batch['train_y'].to(DEVICE))
                 epoch_loss.append(tr_loss.item())
                 tr_loss.backward()
@@ -126,6 +125,10 @@ class SingleTrainer:
         self.final_loss = np.mean(losses['valid_loss'][-1])
         self.last_epoch = epoch
 
+        # Save model
+        if save_path:
+            torch.save(self.model.state_dict(), save_path)
+
 
 class CrossValidation:
     def __init__(self, am_reader, int_start, int_end, architecture,
@@ -168,6 +171,34 @@ class CrossValidation:
             m = getattr(m, comp)
         return m
 
+    @staticmethod
+    def create_datasets(self, int_start, int_end, seq_len):
+        # Get train test split for selected part of the training set
+        input_regs = ['ASIA_PACIFIC', 'ASIA_PACIFIC', 'EMEIA']
+        pred_regs = ['EMEIA', 'AMERICA', 'AMERICA']
+        train_test_splits = [TrainTestSplit(self.am_reader,
+                                            int_start=int_start,
+                                            int_end=int_end,
+                                            input_reg=ir,
+                                            pred_reg=pr)
+                             for ir, pr in zip(input_regs, pred_regs)]
+        # Prepare dataset
+        timeser_datasets = [
+            preproc.TimeSeriesDataset(
+                tts, int_len=seq_len,
+                transform=transforms.Compose([
+                    preproc.FillNaN(), preproc.Normalizing(),
+                    preproc.DummyFillNaN(), preproc.Formatting(),
+                    preproc.FormattingY()
+                ])
+            )
+            for tts in train_test_splits
+        ]
+        return torch.utils.data.ConcatDataset(timeser_datasets), \
+               torch.utils.data.ConcatDataset(
+                   [preproc.ValidDataset(tsds) for tsds in timeser_datasets]
+               )
+
     def run(self):
         print('STARTED CROSS-VALIDATION')
         print('Optimizing hyperparameters for {}'.format(self.architecture))
@@ -208,20 +239,10 @@ class CrossValidation:
             for fold in range(self.folds):
                 print('\tFold: {:d}'.format(fold + 1))
 
-                # Get train test split for selected part of the training set
-                train_test_split = TrainTestSplit(self.am_reader,
-                                                  int_start=int_starts[fold],
-                                                  int_end=int_ends[fold])
-                # Prepare dataset
-                tsds = preproc.TimeSeriesDataset(
-                    train_test_split, int_len=model_params['seq_len'],
-                    transform=transforms.Compose([
-                        preproc.FillNaN(), preproc.Normalizing(),
-                        preproc.DummyFillNaN(), preproc.Formatting(),
-                        preproc.FormattingY()
-                    ])
-                )
-                vds = preproc.ValidDataset(tsds)
+                tsds, vds = self.create_datasets(self,
+                                                 int_start=int_starts[fold],
+                                                 int_end=int_ends[fold],
+                                                 seq_len=model_params['seq_len'])
 
                 # Create new instance of model object
                 architecture = self.get_class(
