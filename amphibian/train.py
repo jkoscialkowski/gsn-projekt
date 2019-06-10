@@ -56,9 +56,8 @@ class SingleTrainer:
               save_path=None):
         # Define DataLoaders
         train_dl = DataLoader(train_ds, batch_size=self.batch_size,
-                              shuffle=True, drop_last=True)
-        test_dl = DataLoader(valid_ds, batch_size=self.batch_size,
-                             drop_last=True)
+                              shuffle=True)
+        test_dl = DataLoader(valid_ds, batch_size=self.batch_size)
 
         losses = {'train_loss': [], 'valid_loss': []}
 

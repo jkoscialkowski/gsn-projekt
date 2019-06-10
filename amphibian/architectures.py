@@ -32,7 +32,7 @@ class SoftmaxRegressionModel(nn.Module):
                             out_features=self.n_outputs)
 
     def forward(self, X):
-        X = X.view(self.batch_size, self.input_size)
+        X = X.view(-1, self.input_size)
         out = self.fc(X)
         return out
 
@@ -64,12 +64,12 @@ class RNNModel(nn.Module):
                           dropout=self.dropout)
         self.fc = nn.Linear(self.hidden_size, self.n_outputs)
 
-    def init_hidden(self):
-        return torch.zeros(self.num_layers, self.batch_size, self.hidden_size,
+    def init_hidden(self, bs):
+        return torch.zeros(self.num_layers, bs, self.hidden_size,
                            requires_grad=False, device=DEVICE)
 
     def forward(self, X):
-        hidden = self.init_hidden()
+        hidden = self.init_hidden(X.shape[1])
         out, _ = self.rnn(X, hidden)
         out = self.fc(out[-1, :, :].squeeze())
         return out
@@ -102,12 +102,12 @@ class GRUModel(nn.Module):
                           dropout=self.dropout)
         self.fc = nn.Linear(self.hidden_size, self.n_outputs)
 
-    def init_hidden(self):
-        return torch.zeros(self.num_layers, self.batch_size, self.hidden_size,
+    def init_hidden(self, bs):
+        return torch.zeros(self.num_layers, bs, self.hidden_size,
                            requires_grad=False, device=DEVICE)
 
     def forward(self, X):
-        hidden = self.init_hidden()
+        hidden = self.init_hidden(X.shape[1])
         out, _ = self.gru(X, hidden)
 
         out = self.fc(out[-1, :, :].squeeze())
@@ -141,14 +141,14 @@ class LSTMModel(nn.Module):
                             dropout=self.dropout)
         self.fc = nn.Linear(self.hidden_size, self.n_outputs)
 
-    def init_hidden(self):
-        return (torch.zeros(self.num_layers, self.batch_size, self.hidden_size,
+    def init_hidden(self, bs):
+        return (torch.zeros(self.num_layers, bs, self.hidden_size,
                             requires_grad=False, device=DEVICE),
-                torch.zeros(self.num_layers, self.batch_size, self.hidden_size,
+                torch.zeros(self.num_layers, bs, self.hidden_size,
                             requires_grad=False, device=DEVICE))
 
     def forward(self, X):
-        hidden = self.init_hidden()
+        hidden = self.init_hidden(X.shape[1])
         out, _ = self.lstm(X, hidden)
         out = self.fc(out[-1, :, :].squeeze())
         return out
@@ -218,28 +218,28 @@ class AttentionModel(nn.Module):
 
         self.fc = nn.Linear(self.hidden_size, self.n_outputs)
 
-    def init_hidden(self, which):
+    def init_hidden(self, which, bs):
         assert which in ['pre', 'post']
         if which == 'pre':
-            dims = self.num_layers, self.batch_size, self.hidden_size
+            dims = self.num_layers, bs, self.hidden_size
         elif which == 'post':
-            dims = self.batch_size, self.hidden_size
+            dims = bs, self.hidden_size
         return torch.zeros(*dims, requires_grad=False, device=DEVICE)
 
     def forward(self, X):
         # Initialize first hidden state for the pre-RNN with zeros
         if self.recurrent_type in ['rnn', 'gru']:
-            hidden_pre = self.init_hidden('pre')
+            hidden_pre = self.init_hidden('pre', X.shape[1])
             out_pre, _ = self.recurrent_pre(X, hidden_pre)
         elif self.recurrent_type == 'lstm':
-            hidden_pre, state_pre = (self.init_hidden('pre'),
-                                     self.init_hidden('pre'))
+            hidden_pre, state_pre = (self.init_hidden('pre', X.shape[1]),
+                                     self.init_hidden('pre', X.shape[1]))
             out_pre, _ = self.recurrent_pre(X, (hidden_pre, state_pre))
 
         # Initialize input to post-RNN with zeros
-        hidden_post = self.init_hidden('post')
+        hidden_post = self.init_hidden('post', X.shape[1])
         if self.recurrent_type == 'lstm':
-            state_post = self.init_hidden('post')
+            state_post = self.init_hidden('post', X.shape[1])
         for el in range(self.seq_len):
             if self.alignment == 'ffnn':
                 # Mix last hidden state of post-RNN and all hidden states of
