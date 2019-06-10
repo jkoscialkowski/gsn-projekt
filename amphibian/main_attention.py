@@ -15,15 +15,17 @@ SAMPLING_GRID = {
     'batch_size': batch_size_dist(32, 256),
     'seq_len': stats.randint(5, 30),
     'hidden_size': stats.randint(5, 20),
-    'dropout': stats.uniform(0, 0.8)
+    'dropout': stats.uniform(0, 0.5)
 }
 
 CONSTANT_GRID = {
     'input_size': 60,
     'n_outputs': 3,
     'num_layers': 2,
-    'max_epochs': 300,
-    'early_stopping_patience': 10
+    'max_epochs': 5,
+    'early_stopping_patience': 10,
+    'recurrent_type': 'lstm',
+    'alignment': 'ffnn'
 }
 
 if __name__ == '__main__':
@@ -34,8 +36,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # Declare path to run directory and create it
-    run_path = 'data/run_attention_{%Y%m%d_%H%M%S}'.format(args.Arch,
-                                                           datetime.now())
+    run_path = 'data/run_attention_{%Y%m%d_%H%M%S}'.format(datetime.now())
     os.makedirs(run_path)
 
     # Redirecting outputs
