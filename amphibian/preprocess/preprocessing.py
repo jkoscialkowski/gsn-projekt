@@ -10,7 +10,7 @@ else:
 
 
 class TimeSeriesDataset(Dataset):
-    def __init__(self, tt_split, int_len=5, transform=None):
+    def __init__(self, tt_split, int_len=5, transform=None, need_y='no'):
         """
         Class TimeSeriesDataset
 
@@ -23,6 +23,7 @@ class TimeSeriesDataset(Dataset):
         self.transform = transform
         self.whole_set = tt_split
         self.int_len = int_len
+        self.need_y = need_y
 
         if self.transform:
             self.whole_set = self.transform(self.whole_set)
@@ -41,10 +42,21 @@ class TimeSeriesDataset(Dataset):
         :param item: index
         :return: one item on the given index
         """
-        obs = self.whole_set['train_obs'][item % self.len_train:item % self.len_train + self.int_len, :]
-        y = self.whole_set['train_y'][item % self.len_train + self.int_len - 1, int(np.floor(item / self.len_train))]
-        sample = {'train_obs': obs, 'train_y': y}
-        return sample
+        assert self.need_y in ['no', 'yes']
+
+        if self.need_y == 'no':
+            obs = self.whole_set['train_obs'][item % self.len_train:item % self.len_train + self.int_len, :]
+            y = self.whole_set['train_y'][item % self.len_train + self.int_len - 1,
+                                          int(np.floor(item / self.len_train))]
+            sample = {'train_obs': obs, 'train_y': y}
+            return sample
+        if self.need_y == 'yes':
+            obs = self.whole_set['train_obs'][item % self.len_train:item % self.len_train + self.int_len, :]
+            y = self.whole_set['train_y'][item % self.len_train + self.int_len - 1,
+                                          int(np.floor(item / self.len_train))]
+            sample = {'train_obs': obs, 'train_y': y}
+            return sample, self.whole_set['train_y'][item % self.len_train:item % self.len_train + self.int_len - 1,
+                           int(np.floor(item / self.len_train))].float()
 
 
 class ValidDataset(Dataset):
@@ -55,10 +67,24 @@ class ValidDataset(Dataset):
         return self.tsds.len_test * self.tsds.whole_set['test_y'].size(1)
 
     def __getitem__(self, item):
-        obs = self.tsds.whole_set['test_obs'][item % self.tsds.len_test:item % self.tsds.len_test + self.tsds.int_len, :]
-        y = self.tsds.whole_set['test_y'][item % self.tsds.len_test + self.tsds.int_len - 1, int(np.floor(item / self.tsds.len_test))]
-        sample = {'test_obs': obs, 'test_y': y}
-        return sample
+        if self.tsds.need_y == 'no':
+            obs = self.tsds.whole_set['test_obs'][
+                  item % self.tsds.len_test:item % self.tsds.len_test + self.tsds.int_len, :]
+            y = self.tsds.whole_set['test_y'][
+                item % self.tsds.len_test + self.tsds.int_len - 1,
+                int(np.floor(item / self.tsds.len_test))]
+            sample = {'test_obs': obs, 'test_y': y}
+            return sample
+        if self.tsds.need_y == 'yes':
+            obs = self.tsds.whole_set['test_obs'][
+                  item % self.tsds.len_test:item % self.tsds.len_test + self.tsds.int_len, :]
+            y = self.tsds.whole_set['test_y'][
+                item % self.tsds.len_test + self.tsds.int_len - 1,
+                int(np.floor(item / self.tsds.len_test))]
+            sample = {'test_obs': obs, 'test_y': y}
+            return sample, self.tsds.whole_set['test_y'][
+                           item % self.tsds.len_test:item % self.tsds.len_test + self.tsds.int_len - 1,
+                           int(np.floor(item / self.tsds.len_test))].float()
 
 
 class FillNaN(object):
