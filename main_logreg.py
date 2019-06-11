@@ -17,7 +17,7 @@ SAMPLING_GRID = {
 CONSTANT_GRID = {
     'input_size': 60,
     'n_outputs': 3,
-    'max_epochs': 3,
+    'max_epochs': 300,
     'early_stopping_patience': 10
 }
 
