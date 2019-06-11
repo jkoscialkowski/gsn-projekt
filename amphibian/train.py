@@ -54,8 +54,9 @@ class SingleTrainer:
                                     lr=learning_rate)
 
     def train(self, train_ds, valid_ds, plot_loss=True, verbose=True,
-              save_path=None):
+              save_path=None, need_y='no'):
         # Define DataLoaders
+        assert need_y in ['no', 'yes'], 'Should be no/yes'
         train_dl = DataLoader(train_ds, batch_size=self.batch_size,
                               shuffle=True)
         test_dl = DataLoader(valid_ds, batch_size=self.batch_size)
@@ -72,8 +73,12 @@ class SingleTrainer:
                 # Switch to training mode
                 self.model.train()
                 self.optimizer.zero_grad()
-                out = self.model(batch['train_obs'].permute(1, 0, 2))
-                tr_loss = self.loss(out, batch['train_y'].to(DEVICE))
+                if need_y == 'yes':
+                    out = self.model(batch[0]['train_obs'].permute(1, 0, 2), y=batch[1].permute(1, 0))
+                    tr_loss = self.loss(out, batch[0]['train_y'].to(DEVICE))
+                elif need_y == 'no':
+                    out = self.model(batch['train_obs'].permute(1, 0, 2))
+                    tr_loss = self.loss(out, batch['train_y'].to(DEVICE))
                 epoch_loss.append(tr_loss.item())
                 tr_loss.backward()
                 self.optimizer.step()
@@ -88,10 +93,15 @@ class SingleTrainer:
             with torch.no_grad():
                 val_loss = []
                 for idx_v_batch, v_batch in enumerate(test_dl):
-                    val_loss.append(self.loss(
-                        self.model(v_batch['test_obs'].permute(1, 0, 2)),
-                        v_batch['test_y']
-                    ).item())
+                    if need_y == 'yes':
+                        val_loss.append(self.loss(self.model(v_batch[0]['test_obs'].permute(1, 0, 2),
+                                                             y=v_batch[1].permute(1, 0)),
+                                                  v_batch[0]['test_y']).item())
+                    elif need_y == 'no':
+                        val_loss.append(self.loss(self.model(v_batch['test_obs'].permute(1, 0, 2)),
+                                                  v_batch['test_y']).item())
+                        val_loss.append(self.loss(
+                            self.model(v_batch['test_obs'].permute(1, 0, 2)), v_batch['test_y']).item())
                 losses['valid_loss'].append(sum(val_loss) / len(test_dl))
 
             # Printing loss for a given epoch
@@ -133,7 +143,7 @@ class SingleTrainer:
 class CrossValidation:
     def __init__(self, am_reader, int_start, int_end, architecture,
                  sampled_param_grid: dict, constant_param_grid: dict,
-                 log_path, n_iter=100, folds=5):
+                 log_path, n_iter=100, folds=5, need_y='no'):
         """Class hyperparameter optimisation by random search and k-fold CV
 
         :param architecture: One of the implemented NN architectures.
@@ -153,6 +163,7 @@ class CrossValidation:
             + '/cv_log_{:%Y%m%d_%H%M%S}.csv'.format(datetime.now())
         self.n_iter = n_iter
         self.folds = folds
+        self.need_y = need_y
         # Dictionary for sampled parameters
         self.sampled_params = {k: [] for k in sampled_param_grid.keys()}
         # Lists for metric statistics and numbers of epochs
@@ -172,7 +183,7 @@ class CrossValidation:
         return m
 
     @staticmethod
-    def create_datasets(self, int_start, int_end, seq_len):
+    def create_datasets(self, int_start, int_end, seq_len, need_y):
         # Get train test split for selected part of the training set
         input_regs = ['ASIA_PACIFIC', 'ASIA_PACIFIC', 'EMEIA']
         pred_regs = ['EMEIA', 'AMERICA', 'AMERICA']
@@ -190,7 +201,8 @@ class CrossValidation:
                     preproc.FillNaN(), preproc.Normalizing(),
                     preproc.DummyFillNaN(), preproc.Formatting(),
                     preproc.FormattingY()
-                ])
+                ]),
+                need_y=need_y
             )
             for tts in train_test_splits
         ]
@@ -242,7 +254,8 @@ class CrossValidation:
                 tsds, vds = self.create_datasets(self,
                                                  int_start=int_starts[fold],
                                                  int_end=int_ends[fold],
-                                                 seq_len=model_params['seq_len'])
+                                                 seq_len=model_params['seq_len'],
+                                                 need_y=self.need_y)
 
                 # Create new instance of model object
                 architecture = self.get_class(
@@ -252,7 +265,7 @@ class CrossValidation:
                 st = SingleTrainer(model=architecture,
                                    batch_size=model_params['batch_size'],
                                    **st_params)
-                st.train(train_ds=tsds, valid_ds=vds, plot_loss=False)
+                st.train(train_ds=tsds, valid_ds=vds, plot_loss=False, need_y=self.need_y)
                 last_epochs.append(st.last_epoch)
                 print('\tFitting ended after {:d} epochs'.format(st.last_epoch + 1))
                 fold_losses.append(st.final_loss)
