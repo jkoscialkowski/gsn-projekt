@@ -156,7 +156,8 @@ class LSTMModel(nn.Module):
 
 class AttentionModel(nn.Module):
     def __init__(self, batch_size, seq_len, input_size, hidden_size, n_outputs,
-                 num_layers=1, dropout=0.1, recurrent_type='rnn', alignment='dotprod', additional_layer = ''):
+                 num_layers=1, dropout=0.1, recurrent_type='rnn', alignment='dotprod', additional_y_layer='no',
+                 switch_cells='no'):
         """
         Class AttentionModel - implementation of simple Attention architecture
 
@@ -173,6 +174,8 @@ class AttentionModel(nn.Module):
         super().__init__()
         assert recurrent_type in ['rnn', 'lstm', 'gru']
         assert alignment in ['dotprod', 'ffnn']
+        assert additional_y_layer in ['no', 'yes']
+        assert switch_cells in ['no', 'yes']
         # Setting parameters
         args, _, _, values = inspect.getargvalues(inspect.currentframe())
         values.pop("self")
@@ -201,6 +204,11 @@ class AttentionModel(nn.Module):
                                         dropout=self.dropout)
             self.recurrent_cell_post = nn.RNNCell(input_size=self.hidden_size,
                                                   hidden_size=self.hidden_size)
+            if switch_cells == 'yes':
+                self.recurrent_cell_post_1 = nn.RNNCell(input_size=self.hidden_size,
+                                                      hidden_size=self.hidden_size)
+                self.recurrent_cell_post_2 = nn.RNNCell(input_size=self.hidden_size,
+                                                      hidden_size=self.hidden_size)
         elif recurrent_type == 'lstm':
             self.recurrent_pre = nn.LSTM(input_size=self.input_size,
                                          hidden_size=self.hidden_size,
@@ -208,6 +216,11 @@ class AttentionModel(nn.Module):
                                          dropout=self.dropout)
             self.recurrent_cell_post = nn.LSTMCell(input_size=self.hidden_size,
                                                    hidden_size=self.hidden_size)
+            if switch_cells == 'yes':
+                self.recurrent_cell_post_1 = nn.LSTMCell(input_size=self.hidden_size,
+                                                      hidden_size=self.hidden_size)
+                self.recurrent_cell_post_2 = nn.LSTMCell(input_size=self.hidden_size,
+                                                      hidden_size=self.hidden_size)
         elif recurrent_type == 'gru':
             self.recurrent_pre = nn.GRU(input_size=self.input_size,
                                         hidden_size=self.hidden_size,
@@ -215,6 +228,14 @@ class AttentionModel(nn.Module):
                                         dropout=self.dropout)
             self.recurrent_cell_post = nn.GRUCell(input_size=self.hidden_size,
                                                   hidden_size=self.hidden_size)
+            if switch_cells == 'yes':
+                self.recurrent_cell_post_1 = nn.GRUCell(input_size=self.hidden_size,
+                                                      hidden_size=self.hidden_size)
+                self.recurrent_cell_post_2 = nn.GRUCell(input_size=self.hidden_size,
+                                                      hidden_size=self.hidden_size)
+
+        if self.additional_y_layer == 'yes':
+            self.add_y_layer = nn.Linear(self.hidden_size + 1, self.hidden_size)
 
         self.fc = nn.Linear(self.hidden_size, self.n_outputs)
 
@@ -226,7 +247,7 @@ class AttentionModel(nn.Module):
             dims = bs, self.hidden_size
         return torch.zeros(*dims, requires_grad=False, device=DEVICE)
 
-    def forward(self, X):
+    def forward(self, X, y=None):
         # Initialize first hidden state for the pre-RNN with zeros
         if self.recurrent_type in ['rnn', 'gru']:
             hidden_pre = self.init_hidden('pre', X.shape[1])
@@ -241,6 +262,10 @@ class AttentionModel(nn.Module):
         if self.recurrent_type == 'lstm':
             state_post = self.init_hidden('post', X.shape[1])
         for el in range(self.seq_len):
+            if self.additional_y_layer == 'yes':
+                if el > 0:
+                    hidden_post = self.add_y_layer(
+                        torch.cat((hidden_post, y[el - 1, :].unsqueeze(0).permute(1, 0)), dim=1))
             if self.alignment == 'ffnn':
                 # Mix last hidden state of post-RNN and all hidden states of
                 # pre-RNN using a feedforward NN
@@ -257,13 +282,54 @@ class AttentionModel(nn.Module):
             attention = out_pre.permute(2, 0, 1) * post_soft
             # Summing softmax-scaled pre-RNN hidden states and transposing
             attention = torch.sum(attention, 1).t()
-            if self.recurrent_type in ['rnn', 'gru']:
-                hidden_post = self.recurrent_cell_post(
-                    attention, hidden_post
-                )
-            elif self.recurrent_type == 'lstm':
-                hidden_post, state_post = self.recurrent_cell_post(
-                    attention, (hidden_post, state_post)
-                )
-
+            if self.switch_cells == 'yes':
+                if el < self.seq_len - 1:
+                    for i in range(y[el, :].size(0)):
+                        if y[el, i] == 0:
+                            if self.recurrent_type in ['rnn', 'gru']:
+                                hidden_post = self.recurrent_cell_post(
+                                    attention, hidden_post
+                                )
+                            elif self.recurrent_type == 'lstm':
+                                hidden_post, state_post = self.recurrent_cell_post(
+                                    attention, (hidden_post, state_post)
+                                )
+                        elif y[el, i] == 1:
+                            if self.recurrent_type in ['rnn', 'gru']:
+                                hidden_post = self.recurrent_cell_post_1(
+                                    attention, hidden_post
+                                )
+                            elif self.recurrent_type == 'lstm':
+                                hidden_post, state_post = self.recurrent_cell_post_1(
+                                    attention, (hidden_post, state_post)
+                                )
+                        elif y[el, i] == 2:
+                            if self.recurrent_type in ['rnn', 'gru']:
+                                hidden_post = self.recurrent_cell_post_2(
+                                    attention, hidden_post
+                                )
+                            elif self.recurrent_type == 'lstm':
+                                hidden_post, state_post = self.recurrent_cell_post_2(
+                                    attention, (hidden_post, state_post)
+                                )
+                else:
+                    if self.recurrent_type in ['rnn', 'gru']:
+                        hidden_post = self.recurrent_cell_post_1(
+                            attention, hidden_post
+                        )
+                    elif self.recurrent_type == 'lstm':
+                        hidden_post, state_post = self.recurrent_cell_post_1(
+                            attention, (hidden_post, state_post)
+                        )
+            else:
+                if self.recurrent_type in ['rnn', 'gru']:
+                    hidden_post = self.recurrent_cell_post(
+                        attention, hidden_post
+                    )
+                elif self.recurrent_type == 'lstm':
+                    hidden_post, state_post = self.recurrent_cell_post(
+                        attention, (hidden_post, state_post)
+                    )
         return self.fc(hidden_post)
+
+
