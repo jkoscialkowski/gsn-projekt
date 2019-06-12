@@ -143,7 +143,7 @@ class SingleTrainer:
 class CrossValidation:
     def __init__(self, am_reader, int_start, int_end, architecture,
                  sampled_param_grid: dict, constant_param_grid: dict,
-                 log_path, n_iter=100, folds=5, need_y='no'):
+                 log_path, n_iter=100, folds=5, need_y='no', switch_cells='no'):
         """Class hyperparameter optimisation by random search and k-fold CV
 
         :param architecture: One of the implemented NN architectures.
@@ -164,6 +164,7 @@ class CrossValidation:
         self.n_iter = n_iter
         self.folds = folds
         self.need_y = need_y
+        self.switch_cells = switch_cells
         # Dictionary for sampled parameters
         self.sampled_params = {k: [] for k in sampled_param_grid.keys()}
         # Lists for metric statistics and numbers of epochs

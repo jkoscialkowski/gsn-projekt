@@ -204,6 +204,11 @@ class AttentionModel(nn.Module):
                                         dropout=self.dropout)
             self.recurrent_cell_post = nn.RNNCell(input_size=self.hidden_size,
                                                   hidden_size=self.hidden_size)
+            if switch_cells == 'yes':
+                self.recurrent_cell_post_1 = nn.RNNCell(input_size=self.hidden_size,
+                                                      hidden_size=self.hidden_size)
+                self.recurrent_cell_post_2 = nn.RNNCell(input_size=self.hidden_size,
+                                                      hidden_size=self.hidden_size)
         elif recurrent_type == 'lstm':
             self.recurrent_pre = nn.LSTM(input_size=self.input_size,
                                          hidden_size=self.hidden_size,
@@ -211,6 +216,11 @@ class AttentionModel(nn.Module):
                                          dropout=self.dropout)
             self.recurrent_cell_post = nn.LSTMCell(input_size=self.hidden_size,
                                                    hidden_size=self.hidden_size)
+            if switch_cells == 'yes':
+                self.recurrent_cell_post_1 = nn.LSTMCell(input_size=self.hidden_size,
+                                                      hidden_size=self.hidden_size)
+                self.recurrent_cell_post_2 = nn.LSTMCell(input_size=self.hidden_size,
+                                                      hidden_size=self.hidden_size)
         elif recurrent_type == 'gru':
             self.recurrent_pre = nn.GRU(input_size=self.input_size,
                                         hidden_size=self.hidden_size,
@@ -218,6 +228,11 @@ class AttentionModel(nn.Module):
                                         dropout=self.dropout)
             self.recurrent_cell_post = nn.GRUCell(input_size=self.hidden_size,
                                                   hidden_size=self.hidden_size)
+            if switch_cells == 'yes':
+                self.recurrent_cell_post_1 = nn.GRUCell(input_size=self.hidden_size,
+                                                      hidden_size=self.hidden_size)
+                self.recurrent_cell_post_2 = nn.GRUCell(input_size=self.hidden_size,
+                                                      hidden_size=self.hidden_size)
 
         if self.additional_y_layer == 'yes':
             self.add_y_layer = nn.Linear(self.hidden_size + 1, self.hidden_size)
@@ -267,13 +282,58 @@ class AttentionModel(nn.Module):
             attention = out_pre.permute(2, 0, 1) * post_soft
             # Summing softmax-scaled pre-RNN hidden states and transposing
             attention = torch.sum(attention, 1).t()
-            if self.recurrent_type in ['rnn', 'gru']:
-                hidden_post = self.recurrent_cell_post(
-                    attention, hidden_post
-                )
-            elif self.recurrent_type == 'lstm':
-                hidden_post, state_post = self.recurrent_cell_post(
-                    attention, (hidden_post, state_post)
-                )
-
+            if self.switch_cells == 'yes':
+                if el < self.seq_len - 1:
+                    for i in range(y[el, :].size(0)):
+                        if y[el, i] == 0:
+                            if self.recurrent_type in ['rnn', 'gru']:
+                                hidden_post = self.recurrent_cell_post(
+                                    attention, hidden_post
+                                )
+                            elif self.recurrent_type == 'lstm':
+                                hidden_post, state_post = self.recurrent_cell_post(
+                                    attention, (hidden_post, state_post)
+                                )
+                        elif y[el, i] == 1:
+                            if self.recurrent_type in ['rnn', 'gru']:
+                                hidden_post = self.recurrent_cell_post_1(
+                                    attention, hidden_post
+                                )
+                            elif self.recurrent_type == 'lstm':
+                                hidden_post, state_post = self.recurrent_cell_post_1(
+                                    attention, (hidden_post, state_post)
+                                )
+                        elif y[el, i] == 2:
+                            if self.recurrent_type in ['rnn', 'gru']:
+                                hidden_post = self.recurrent_cell_post_2(
+                                    attention, hidden_post
+                                )
+                            elif self.recurrent_type == 'lstm':
+                                hidden_post, state_post = self.recurrent_cell_post_2(
+                                    attention, (hidden_post, state_post)
+                                )
+                else:
+                    if self.recurrent_type in ['rnn', 'gru']:
+                        hidden_post = self.recurrent_cell_post_1(
+                            attention, hidden_post
+                        )
+                    elif self.recurrent_type == 'lstm':
+                        hidden_post, state_post = self.recurrent_cell_post_1(
+                            attention, (hidden_post, state_post)
+                        )
+            else:
+                if self.recurrent_type in ['rnn', 'gru']:
+                    hidden_post = self.recurrent_cell_post(
+                        attention, hidden_post
+                    )
+                elif self.recurrent_type == 'lstm':
+                    hidden_post, state_post = self.recurrent_cell_post(
+                        attention, (hidden_post, state_post)
+                    )
         return self.fc(hidden_post)
+
+    def switch_cells(self, X, y):
+        if y == 0:
+            return
+
+
