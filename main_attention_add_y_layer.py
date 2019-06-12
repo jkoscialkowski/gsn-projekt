@@ -20,7 +20,7 @@ CONSTANT_GRID = {
     'input_size': 60,
     'n_outputs': 3,
     'num_layers': 1,
-    'max_epochs': 10,
+    'max_epochs': 50,
     'early_stopping_patience': 10,
     'recurrent_type': 'lstm',
     'alignment': 'ffnn',
