@@ -332,8 +332,4 @@ class AttentionModel(nn.Module):
                     )
         return self.fc(hidden_post)
 
-    def switch_cells(self, X, y):
-        if y == 0:
-            return
-
 
