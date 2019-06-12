@@ -28,6 +28,8 @@ class ConfusionMatrix:
 
     def compute_metrics(self):
         rowsums, colsums = self.confmat.sum(axis=1), self.confmat.sum(axis=0)
+        rowsums[rowsums == 0] = 1e6
+        colsums[colsums == 0] = 1e6
 
         arr = np.concatenate([
             self.confmat,
@@ -51,7 +53,7 @@ class ConfusionMatrix:
         if pos[0] == pos[1] and pos[0] == size:
             return [0.17, 0.20, 0.17, 1.0]
         elif pos[0] == pos[1]:
-            return [0.35, 0.8, 0.55, 1.0]
+            return [0.85, 0.82, 0.92, 1.0]
         elif pos[0] == size or pos[1] == size:
             return [0.27, 0.30, 0.27, 1.0]
         else:
