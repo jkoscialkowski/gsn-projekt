@@ -24,12 +24,13 @@ CONSTANT_GRID = {
     'early_stopping_patience': 10,
     'recurrent_type': 'lstm',
     'alignment': 'ffnn',
-    'additional_y_layer': 'yes'
+    'additional_y_layer': 'yes',
+    'switch_cells': 'yes'
 }
 
 if __name__ == '__main__':
     # Declare path to run directory and create it
-    run_path = 'data/run_attention_add_y_layer{:%Y%m%d_%H%M%S}'.format(datetime.now())
+    run_path = 'data/run_attention_switch_cells{:%Y%m%d_%H%M%S}'.format(datetime.now())
     os.makedirs(run_path)
 
      # Redirecting outputs
@@ -52,7 +53,8 @@ if __name__ == '__main__':
                          constant_param_grid=CONSTANT_GRID,
                          log_path=run_path,
                          n_iter=200,
-                         need_y='yes')
+                         need_y='yes',
+                         switch_cells='yes')
 
      # Run CrossValidation
     cv.run()
