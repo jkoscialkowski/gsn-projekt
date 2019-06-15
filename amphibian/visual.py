@@ -194,6 +194,17 @@ class ConfusionMatrix:
 
 class MAVI:
     def __init__(self, model, dataset, obs_names, y_names):
+        """Amphibian-specific Model-Agnostic Variable Importance. We want to
+        measure the importance of a single company. To do this we observe by how
+        much the loss would drop after we permute all data corresponding to the
+        company.
+
+        :param model: instance of a model defined in amphibian.architectures,
+        inheriting from torch.nn.Module
+        :param dataset: a Dataset on which to calculate MAVI
+        :param obs_names: predictor company names
+        :param y_names: target company names
+        """
         self.model = model
         self.loss_fn = nn.CrossEntropyLoss()
         self.model.eval()
@@ -223,7 +234,7 @@ class MAVI:
 
     def compute_losses(self):
         """Compute the loss for unpermuted data and then for permuted for
-        each company
+        each combination of target company/predictor company
         """
         with torch.no_grad():
             for company_no, batch in enumerate(self.dataloader):
@@ -245,6 +256,10 @@ class MAVI:
                     ).item()
 
     def plot_mavi(self, company_no):
+        """Create a barplot with MAVI's for all companies from predictor region.
+
+        :param company_no: number of company from predictor region
+        """
         y_name = self.y_names[company_no]
         vis = np.array(list(self.perm_loss_dict[company_no].values())) \
               - self.loss_dict[company_no]
@@ -252,5 +267,3 @@ class MAVI:
                .sort_values('VI', ascending=False)
         sns.barplot(x=df.VI, y=df.Companies, orient='h').set_title(y_name)
         plt.show()
-
-
