@@ -1,6 +1,13 @@
 # Amphibian
-Cross-timezone, business-wide share price prediction using various recurrent architectures. 
-Can Audi share prices be predicted with Asian motor company stock quotes? Price prediction using Attention neural network.
+Cross-timezone, business-wide share price prediction using various recurrent 
+architectures. 
+
+The goal of the project was to investigate whether stock quotes for companies 
+from the same area, but earlier timezone carry _decent_ predictive power if
+compared to the company itself or all companies from its region. Code in this 
+repository allows the user to download data for a chosen business and then
+experiment with several RNN-based architectures.
+
 
 ## Run on your own
 This guide assumes you have Python 3.x installed on your computer. Clone the repository to a desired local directory
@@ -27,3 +34,17 @@ For example to train the Attention network run
 ```
 python -m main_attention.py 
 ```
+
+This will yield .csv files with Cross-Validation results. The best set of
+hyperparameters can then be used to train a final model which will be used for
+generating insights.
+
+## Visualise
+Amphibian comes with the `amphibian.visual` module which implements:
+* a nice class for confusion matrix display (with precisions, recalls and 
+accuracy presented),
+* Model-Agnostic Variable Importance which computes permutational importance for
+a given company and shows the results on a barplot. 
+
+We advise playing around with a trained model and the visualisation tools 
+implemented in the said module. 
