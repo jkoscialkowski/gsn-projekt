@@ -12,22 +12,36 @@ NO_COMPANIES = 10
 
 
 class ConfusionMatrix:
-    def __init__(self, confmat, class_labels, truth_along_y=True,
-                 figsize=(9, 9)):
+    def __init__(self, confmat: np.array, class_labels: list,
+                 truth_along_y=True, figsize: tuple = (9, 9)):
+        """Class ConfusionMatrix - create confusion matrices with precision,
+        recall and accuracy displayed as well. This is a modified version of
+        a function for plotting confmats by Wagner Cipriano:
+        https://github.com/wcipriano/pretty-print-confusion-matrix
+
+        :param confmat: confusion matrix in np.array
+        :param class_labels: list of class labels
+        :param truth_along_y: whether true classes are along y-axis
+        :param figsize: figure size as a tuple
+        """
         self.confmat = confmat
         self.class_labels = class_labels
         self.truth_along_y = truth_along_y
         self.figsize = figsize
 
     @staticmethod
-    def create_new_fig(fn, figsize):
-        """ Init graphics """
+    def create_new_fig(fn, figsize: tuple):
+        """Init graphics"""
         fig1 = plt.figure(fn, figsize)
         ax1 = fig1.gca()  # Get current axis
         ax1.cla()  # clear existing plot
         return fig1, ax1
 
     def compute_metrics(self):
+        """Compute precision, recall and accuracy.
+
+        :return: np.array with augmented confmat
+        """
         rowsums, colsums = self.confmat.sum(axis=1), self.confmat.sum(axis=0)
 
         arr = np.concatenate([
@@ -48,6 +62,12 @@ class ConfusionMatrix:
 
     @staticmethod
     def get_bg_color(self, pos):
+        """Set background colour for a given position in the array.
+
+        :param self:
+        :param pos: coordinate of cell in the confmat
+        :return: list of RGBA
+        """
         size = self.confmat.shape[0]
         if pos[0] == pos[1] and pos[0] == size:
             return [0.17, 0.20, 0.17, 1.0]
@@ -60,6 +80,13 @@ class ConfusionMatrix:
 
     @staticmethod
     def prepare_texts(self, pos, curr_text):
+        """Create texts to display.
+
+        :param self:
+        :param pos: coordinate of cell in the confmat
+        :param curr_text: text to display
+        :return: list of dictionaries to pass to ax.text
+        """
         size = self.confmat.shape[0]
         text_kwargs = dict(color='w', ha="center", va="center", gid='sum',
                            fontproperties=fm.FontProperties(weight='bold',
@@ -90,7 +117,11 @@ class ConfusionMatrix:
                          int(self.confmat_augmented[row, col])),
                      'kw': text_kwargs}]
 
-    def plot(self, fontsize):
+    def plot(self, fontsize: int):
+        """Create the confmat plot.
+
+        :param fontsize:
+        """
         # The first argument is for always plotting in the same window
         fig, ax1 = self.create_new_fig('Conf matrix default', self.figsize)
         ax1.set_title('Confusion matrix', fontsize=fontsize)
@@ -160,6 +191,15 @@ class ConfusionMatrix:
 
 class MAVI:
     def __init__(self, model, valid_dataset):
+        """Amphibian-specific Model-Agnostic Variable Importance. The idea is to
+        infer a company's inference by measuring the increase in loss after
+        permuting the quotes for the company.
+
+        :param model: instance of a model defined in
+        amphibian.architectures, inheriting from torch.nn.Module
+        :param valid_dataset: instance of
+        amphibian.preprocess.preprocessing.ValidDataset
+        """
         self.model = model
         self.loss_fn = nn.CrossEntropyLoss()
         self.model.eval()
@@ -172,6 +212,12 @@ class MAVI:
 
     @staticmethod
     def permute_company(tensor: torch.Tensor, company_no: int):
+        """Shuffle quotes corresponding to a given company.
+
+        :param tensor: torch.Tensor with data
+        :param company_no: number of company from predictor region
+        :return: input tensor with adequate slices shuffled
+        """
         shuffle_list = [company_no + i * NO_COMPANIES for i in range(6)]
         shuffled = tensor.clone()
         shuffled[:, :, shuffle_list] = shuffled[torch.randperm(tensor.shape[0]),
@@ -180,6 +226,9 @@ class MAVI:
         return shuffled
 
     def compute_losses(self):
+        """Compute the loss for unpermuted data and then for permuted for
+        each company
+        """
         with torch.no_grad():
             for company_no, batch in enumerate(self.dataloader):
                 self.loss_dict[company_no] = self.loss_fn(
