@@ -1,6 +1,7 @@
 import matplotlib.font_manager as fm
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import seaborn as sns
 import torch
 import torch.nn as nn
@@ -43,6 +44,8 @@ class ConfusionMatrix:
         :return: np.array with augmented confmat
         """
         rowsums, colsums = self.confmat.sum(axis=1), self.confmat.sum(axis=0)
+        rowsums[rowsums == 0] = 1e6
+        colsums[colsums == 0] = 1e6
 
         arr = np.concatenate([
             self.confmat,
@@ -72,7 +75,7 @@ class ConfusionMatrix:
         if pos[0] == pos[1] and pos[0] == size:
             return [0.17, 0.20, 0.17, 1.0]
         elif pos[0] == pos[1]:
-            return [0.35, 0.8, 0.55, 1.0]
+            return [0.85, 0.82, 0.92, 1.0]
         elif pos[0] == size or pos[1] == size:
             return [0.27, 0.30, 0.27, 1.0]
         else:
@@ -190,23 +193,16 @@ class ConfusionMatrix:
 
 
 class MAVI:
-    def __init__(self, model, valid_dataset):
-        """Amphibian-specific Model-Agnostic Variable Importance. The idea is to
-        infer a company's inference by measuring the increase in loss after
-        permuting the quotes for the company.
-
-        :param model: instance of a model defined in
-        amphibian.architectures, inheriting from torch.nn.Module
-        :param valid_dataset: instance of
-        amphibian.preprocess.preprocessing.ValidDataset
-        """
+    def __init__(self, model, dataset, obs_names, y_names):
         self.model = model
         self.loss_fn = nn.CrossEntropyLoss()
         self.model.eval()
-        self.nobs = int(len(valid_dataset) / NO_COMPANIES)
-        self.dataloader = DataLoader(valid_dataset,
+        self.nobs = int(len(dataset) / NO_COMPANIES)
+        self.dataloader = DataLoader(dataset,
                                      batch_size=self.nobs,
                                      drop_last=True)
+        self.obs_names = obs_names
+        self.y_names = y_names
         self.loss_dict = {}
         self.perm_loss_dict = {}
 
@@ -220,9 +216,9 @@ class MAVI:
         """
         shuffle_list = [company_no + i * NO_COMPANIES for i in range(6)]
         shuffled = tensor.clone()
-        shuffled[:, :, shuffle_list] = shuffled[torch.randperm(tensor.shape[0]),
-                                                torch.randperm(tensor.shape[1]),
-                                                shuffle_list]
+        shuffled[:, :, shuffle_list] = shuffled[
+            torch.randperm(tensor.shape[0]), :, :
+        ][:, torch.randperm(tensor.shape[1]), :][:, :, shuffle_list]
         return shuffled
 
     def compute_losses(self):
@@ -232,8 +228,8 @@ class MAVI:
         with torch.no_grad():
             for company_no, batch in enumerate(self.dataloader):
                 self.loss_dict[company_no] = self.loss_fn(
-                    self.model(batch['test_obs'].permute(1, 0, 2)),
-                    batch['test_y']
+                    self.model(batch['train_obs'].permute(1, 0, 2)),
+                    batch['train_y']
                 ).item()
 
                 # Compute permutational losses for a given company
@@ -242,10 +238,19 @@ class MAVI:
                 for perm_comp in range(NO_COMPANIES):
                     self.perm_loss_dict[company_no][perm_comp] = self.loss_fn(
                         self.model(self.permute_company(
-                            batch['test_obs'].permute(1, 0, 2)
+                            batch['train_obs'].permute(1, 0, 2),
+                            perm_comp
                         )),
-                        batch['test_y']
+                        batch['train_y']
                     ).item()
 
     def plot_mavi(self, company_no):
-        pass
+        y_name = self.y_names[company_no]
+        vis = np.array(list(self.perm_loss_dict[company_no].values())) \
+              - self.loss_dict[company_no]
+        df = pd.DataFrame({'Companies': self.obs_names, 'VI': vis}) \
+               .sort_values('VI', ascending=False)
+        sns.barplot(x=df.VI, y=df.Companies, orient='h').set_title(y_name)
+        plt.show()
+
+
