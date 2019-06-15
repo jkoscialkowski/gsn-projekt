@@ -33,12 +33,18 @@ NON_MODEL_PARAMETERS = [
 
 
 class SingleTrainer:
-    def __init__(self, model, batch_size, learning_rate=1e-3, max_epochs=500,
-                 early_stopping_patience=None):
-        """
-        Class SingleTrainer -
+    def __init__(self, model, batch_size: int, learning_rate: float = 1e-3,
+                 max_epochs: int = 500, early_stopping_patience: int = None):
+        """Class SingleTrainer - a general wrapper for training NNs on
+        given datasets, for a given set of hyperparameters.
 
+        :param model: an instance of architecture class inheriting from
+        torch.nn.Module, as in amphibian.architectures
         :param batch_size: size of the batch
+        :param learning_rate: learning rate for Adam constructor
+        :param max_epochs: maximum number of epochs
+        :param early_stopping_patience: if not None, a maximum number of epochs
+        to wait for validation loss drop before stopping training
         """
         super().__init__()
         # Setting parameters
@@ -55,26 +61,48 @@ class SingleTrainer:
 
     def train(self, train_ds, valid_ds, plot_loss=True, verbose=True,
               save_path=None, need_y='no'):
-        # Define DataLoaders
+        """Method for training, takes train and validation Datasets, as well
+        as parameters specifying training monitoring and trains a network for
+        a given set of hyperparameters.
+
+        :param train_ds: training Dataset
+        :param valid_ds: validation Dataset
+        :param plot_loss: whether to plot loss during training
+        :param verbose: whether to print loss after each epoch
+        :param save_path: if given, serialises the model and saves there
+        :param need_y: changes commands for architectures considering lagged y's
+        """
+        # Create DataLoaders
         assert need_y in ['no', 'yes'], 'Should be no/yes'
         train_dl = DataLoader(train_ds, batch_size=self.batch_size,
                               shuffle=True)
         test_dl = DataLoader(valid_ds, batch_size=self.batch_size)
 
+        # Dictionary for losses
         losses = {'train_loss': [], 'valid_loss': []}
 
+        # Plot losses if the user chooses so
         if plot_loss:
             liveloss = PlotLosses()
+
+        # Iterate over epochs
         for epoch in range(self.max_epochs):
+
+            # Switch to training mode
+            self.model.train()
+
             if verbose:
                 print('Starting epoch {}'.format(epoch + 1))
+
+            # A list for batch-wise training losses in a given epoch
             epoch_loss = []
+
+            # Iterate over batches
             for idx_batch, batch in enumerate(train_dl):
-                # Switch to training mode
-                self.model.train()
                 self.optimizer.zero_grad()
                 if need_y == 'yes':
-                    out = self.model(batch[0]['train_obs'].permute(1, 0, 2), y=batch[1].permute(1, 0))
+                    out = self.model(batch[0]['train_obs'].permute(1, 0, 2),
+                                     y=batch[1].permute(1, 0))
                     tr_loss = self.loss(out, batch[0]['train_y'].to(DEVICE))
                 elif need_y == 'no':
                     out = self.model(batch['train_obs'].permute(1, 0, 2))
@@ -91,17 +119,21 @@ class SingleTrainer:
 
             # Compute validation loss by iterating through valid dl batches
             with torch.no_grad():
+
+                # A list for batch-wise validation losses
                 val_loss = []
+
+                # Iterate over batches in the validation DataLoader
                 for idx_v_batch, v_batch in enumerate(test_dl):
                     if need_y == 'yes':
-                        val_loss.append(self.loss(self.model(v_batch[0]['test_obs'].permute(1, 0, 2),
-                                                             y=v_batch[1].permute(1, 0)),
-                                                  v_batch[0]['test_y']).item())
-                    elif need_y == 'no':
-                        val_loss.append(self.loss(self.model(v_batch['test_obs'].permute(1, 0, 2)),
-                                                  v_batch['test_y']).item())
                         val_loss.append(self.loss(
-                            self.model(v_batch['test_obs'].permute(1, 0, 2)), v_batch['test_y']).item())
+                            self.model(v_batch[0]['test_obs'].permute(1, 0, 2),
+                                       y=v_batch[1].permute(1, 0)),
+                            v_batch[0]['test_y']).item())
+                    elif need_y == 'no':
+                        val_loss.append(self.loss(
+                            self.model(v_batch['test_obs'].permute(1, 0, 2)),
+                            v_batch['test_y']).item())
                 losses['valid_loss'].append(sum(val_loss) / len(test_dl))
 
             # Printing loss for a given epoch
@@ -141,15 +173,27 @@ class SingleTrainer:
 
 
 class CrossValidation:
-    def __init__(self, am_reader, int_start, int_end, architecture,
+    def __init__(self, am_reader, int_start: int, int_end: int, architecture,
                  sampled_param_grid: dict, constant_param_grid: dict,
-                 log_path, n_iter=100, folds=5, need_y='no', switch_cells='no'):
-        """Class hyperparameter optimisation by random search and k-fold CV
+                 log_path: str, n_iter=100, folds=5, need_y: str = 'no'):
+        """Class CrossValidation - hyperparameter optimisation by random search
+        and k-fold CV
 
-        :param architecture: One of the implemented NN architectures.
-        :param param_grid: Has to reflect parameters which can be used by the architecture.
-        :param n_iter:
-        :param folds:
+        :param am_reader: instance of the amphibian.fetch.reader.AmphibianReader
+        class
+        :param int_start: interval start passed to
+        amphibian.preprocess.train_test_split.TrainTestSplit
+        :param int_start: interval end passed to
+        amphibian.preprocess.train_test_split.TrainTestSplit
+        :param architecture: one of the implemented NN architectures.
+        :param sampled_param_grid: dictionary of hyperparameters sampled for the
+        given CV iteration
+        :param constant_param_grid: dictionary of parameters which we want to
+        keep fixed for all CV iterations
+        :param log_path: where to save a .csv file with CV results
+        :param n_iter: number of CV iterations
+        :param folds: number of CV folds
+        :param need_y: changes commands for architectures considering lagged y's
         """
         assert architecture in IMPLEMENTED_ARCHITECTURES, \
             'Chosen architecture is not implemented'
@@ -164,7 +208,6 @@ class CrossValidation:
         self.n_iter = n_iter
         self.folds = folds
         self.need_y = need_y
-        self.switch_cells = switch_cells
         # Dictionary for sampled parameters
         self.sampled_params = {k: [] for k in sampled_param_grid.keys()}
         # Lists for metric statistics and numbers of epochs
@@ -175,7 +218,12 @@ class CrossValidation:
                         'no_epochs': []}
 
     @staticmethod
-    def get_class(cls):
+    def get_class(cls: str):
+        """Method for creating an instance of a class using a string
+
+        :param cls: a string with import path to the class
+        :return: an object of the input class
+        """
         parts = cls.split('.')
         module = ".".join(parts[:-1])
         m = __import__(module)
@@ -184,7 +232,18 @@ class CrossValidation:
         return m
 
     @staticmethod
-    def create_datasets(self, int_start, int_end, seq_len, need_y):
+    def create_datasets(self, int_start: int, int_end: int, seq_len: int,
+                        need_y: str):
+        """Create datasets for all region combinations for given time interval
+        beginning and end.
+
+        :param self:
+        :param int_start: interval start
+        :param int_end: interval start
+        :param seq_len:
+        :param need_y:
+        :return: train and validation ConcatDatasets
+        """
         # Get train test split for selected part of the training set
         input_regs = ['ASIA_PACIFIC', 'ASIA_PACIFIC', 'EMEIA']
         pred_regs = ['EMEIA', 'AMERICA', 'AMERICA']
@@ -213,8 +272,14 @@ class CrossValidation:
                )
 
     def run(self):
+        """Perform Cross-Validation.
+
+        :return: a pd.DataFrame with CV results
+        """
         print('STARTED CROSS-VALIDATION')
         print('Optimizing hyperparameters for {}'.format(self.architecture))
+
+        # CV iterations
         for it in range(self.n_iter):
             print('Beginning CV iteration {:d}'.format(it + 1))
 
@@ -229,8 +294,10 @@ class CrossValidation:
                 self.sampled_params[k].append(par)
             print('Trying for the following parameters: {}'.
                   format(str(sampled_params)))
+
             # Concatenate sampled and constant parameters
             model_params = {**sampled_params, **self.constant_param_grid}
+
             # Extract parameters for SingleTrainer
             st_params = {p: model_params.pop(p)
                          for p in NON_MODEL_PARAMETERS}
@@ -252,11 +319,13 @@ class CrossValidation:
             for fold in range(self.folds):
                 print('\tFold: {:d}'.format(fold + 1))
 
-                tsds, vds = self.create_datasets(self,
-                                                 int_start=int_starts[fold],
-                                                 int_end=int_ends[fold],
-                                                 seq_len=model_params['seq_len'],
-                                                 need_y=self.need_y)
+                tsds, vds = self.create_datasets(
+                    self,
+                    int_start=int_starts[fold],
+                    int_end=int_ends[fold],
+                    seq_len=model_params['seq_len'],
+                    need_y=self.need_y
+                )
 
                 # Create new instance of model object
                 architecture = self.get_class(
@@ -266,9 +335,11 @@ class CrossValidation:
                 st = SingleTrainer(model=architecture,
                                    batch_size=model_params['batch_size'],
                                    **st_params)
-                st.train(train_ds=tsds, valid_ds=vds, plot_loss=False, need_y=self.need_y)
+                st.train(train_ds=tsds, valid_ds=vds, plot_loss=False,
+                         need_y=self.need_y)
                 last_epochs.append(st.last_epoch)
-                print('\tFitting ended after {:d} epochs'.format(st.last_epoch + 1))
+                print('\tFitting ended after {:d} epochs'.format(
+                    st.last_epoch + 1))
                 fold_losses.append(st.final_loss)
                 print('\tLoss on this fold: {:.5f}'.format(st.final_loss))
 
@@ -287,13 +358,16 @@ class CrossValidation:
         return self.summary_df
 
 
-def batch_size_dist(min, max):
-    """Function for sampling powers of 2
+def batch_size_dist(min_num: int, max_num: int):
+    """Function for sampling powers of 2.
+
+    :param min_num: minimum number (a power of 2)
+    :param max_num: maximum number (a power of 2)
     """
-    assert math.log(min, 2).is_integer() and math.log(max, 2).is_integer(),\
+    assert math.log(min_num, 2).is_integer() and math.log(max_num, 2).is_integer(),\
         'Supplied minimum and maximum have to be powers of 2'
-    min_pow = int(math.log(min, 2))
-    max_pow = int(math.log(max, 2))
+    min_pow = int(math.log(min_num, 2))
+    max_pow = int(math.log(max_num, 2))
     no = max_pow - min_pow + 1
     return stats.rv_discrete(
         values=([2 ** p for p in np.arange(min_pow, max_pow + 1)],

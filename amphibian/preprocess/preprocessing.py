@@ -61,6 +61,14 @@ class TimeSeriesDataset(Dataset):
 
 class ValidDataset(Dataset):
     def __init__(self, tsds):
+        """Class ValidDataset
+
+        While TimeSeriesDataset is the main machine for data processing,
+        ValidDataset takes an instance of TimeSeriesDataset and creates a proper
+        Dataset for validation/testing purpose
+
+        :param tsds: Instance of TimeSeriesDataset
+        """
         self.tsds = tsds
 
     def __len__(self):
@@ -68,8 +76,9 @@ class ValidDataset(Dataset):
 
     def __getitem__(self, item):
         if self.tsds.need_y == 'no':
-            obs = self.tsds.whole_set['test_obs'][
-                  item % self.tsds.len_test:item % self.tsds.len_test + self.tsds.int_len, :]
+            obs = self.tsds.whole_set['test_obs'][item % self.tsds.len_test:
+                                                  item % self.tsds.len_test +
+                                                  self.tsds.int_len, :]
             y = self.tsds.whole_set['test_y'][
                 item % self.tsds.len_test + self.tsds.int_len - 1,
                 int(np.floor(item / self.tsds.len_test))]
@@ -77,19 +86,25 @@ class ValidDataset(Dataset):
             return sample
         if self.tsds.need_y == 'yes':
             obs = self.tsds.whole_set['test_obs'][
-                  item % self.tsds.len_test:item % self.tsds.len_test + self.tsds.int_len, :]
+                  item % self.tsds.len_test:
+                  item % self.tsds.len_test +
+                  self.tsds.int_len, :]
             y = self.tsds.whole_set['test_y'][
                 item % self.tsds.len_test + self.tsds.int_len - 1,
                 int(np.floor(item / self.tsds.len_test))]
             sample = {'test_obs': obs, 'test_y': y}
             return sample, self.tsds.whole_set['test_y'][
-                           item % self.tsds.len_test:item % self.tsds.len_test + self.tsds.int_len - 1,
+                           item % self.tsds.len_test:
+                           item % self.tsds.len_test +
+                           self.tsds.int_len - 1,
                            int(np.floor(item / self.tsds.len_test))].float()
 
 
 class FillNaN(object):
     def __call__(self, whole_set):
-        """
+        """FillNaN class implementing a __call__ method to comply with the
+        torchvision.transforms API.
+
         :param whole_set: set of observations
         :return: set of NaN values filled with prior observation
         """

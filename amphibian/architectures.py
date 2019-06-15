@@ -12,9 +12,9 @@ else:
 
 
 class SoftmaxRegressionModel(nn.Module):
-    def __init__(self, batch_size, seq_len, input_size, n_outputs):
-        """
-        Class SoftmaxRegressionModel - implementation of Softmax Regression Model
+    def __init__(self, batch_size: int, seq_len: int, input_size: int,
+                 n_outputs: int):
+        """Class SoftmaxRegressionModel - implementation of Softmax Regression.
 
         :param batch_size: size of the batch
         :param seq_len: only for compatibility with training classes
@@ -38,10 +38,11 @@ class SoftmaxRegressionModel(nn.Module):
 
 
 class RNNModel(nn.Module):
-    def __init__(self, batch_size, seq_len, input_size, hidden_size, n_outputs,
-                 num_layers=1, dropout=0.1):
-        """
-        Class RNNModel - implementation of simple RNN model
+    def __init__(self, batch_size: int, seq_len: int, input_size: int,
+                 hidden_size: int, n_outputs: int, num_layers: int = 1,
+                 dropout: float = 0.1):
+        """Class RNNModel - implementation of simple RNN model with a dense
+        layer just before output.
 
         :param batch_size: size of the batch
         :param seq_len: number of days
@@ -76,17 +77,19 @@ class RNNModel(nn.Module):
 
 
 class GRUModel(nn.Module):
-    def __init__(self, batch_size, seq_len, input_size, hidden_size, n_outputs,
-                 num_layers=1, dropout=0.1):
+    def __init__(self, batch_size: int, seq_len: int, input_size: int,
+                 hidden_size: int, n_outputs: int, num_layers: int = 1,
+                 dropout: float = 0.1):
         """
-        Class GRUModel - implementation of GRU architecture
+        Class GRUModel - implementation of the Gated Recurrent Unit with a dense
+        layer just before output.
 
         :param batch_size: size of the batch
         :param seq_len: number of days
         :param input_size: number of inputs in the specific day
         :param hidden_size: number of features in the hidden state
         :param n_outputs: number of output values from the fully connected layer
-        :param num_layers: number of layers of the RNN
+        :param num_layers: number of layers of the GRU
         :param dropout: dropout
         """
         super().__init__()
@@ -115,17 +118,19 @@ class GRUModel(nn.Module):
 
 
 class LSTMModel(nn.Module):
-    def __init__(self, batch_size, seq_len, input_size, hidden_size, n_outputs,
-                 num_layers=1, dropout=0.1): # remember about cuda_device
+    def __init__(self, batch_size: int, seq_len: int, input_size: int,
+                 hidden_size: int, n_outputs: int, num_layers: int = 1,
+                 dropout: float = 0.1):
         """
-        Class LSTMModel - implementation of simple LSTM architecture
+        Class LSTMModel - implementation of Long Short-Term Memory with a
+        single dense layer just before output.
 
         :param batch_size: size of the batch
         :param seq_len: number of days
         :param input_size: number of inputs in the specific day
         :param hidden_size: number of features in the hidden state
         :param n_outputs: number of output values from the fully connected layer
-        :param num_layers: number of layers of the RNN
+        :param num_layers: number of layers of the LSTM
         :param dropout: dropout probability in the LSTM layer
         """
         super().__init__()
@@ -155,21 +160,30 @@ class LSTMModel(nn.Module):
 
 
 class AttentionModel(nn.Module):
-    def __init__(self, batch_size, seq_len, input_size, hidden_size, n_outputs,
-                 num_layers=1, dropout=0.1, recurrent_type='rnn', alignment='dotprod', additional_y_layer='no',
-                 switch_cells='no'):
+    def __init__(self, batch_size: int, seq_len: int, input_size: int,
+                 hidden_size: int, n_outputs: int, num_layers: int = 1,
+                 dropout: float = 0.1, recurrent_type: str = 'rnn',
+                 alignment: str = 'dotprod', additional_y_layer: str = 'no',
+                 switch_cells: str = 'no'):
         """
-        Class AttentionModel - implementation of simple Attention architecture
+        Class AttentionModel - implementation of Attention Mechanism, with the
+        possibility to
+
+        # TODO: MJ finish the docstring and parameter description pls
 
         :param batch_size: size of the batch
         :param seq_len: number of days
         :param input_size: number of inputs in the specific day
         :param hidden_size: number of neurons in the
         :param n_outputs: number of output values from the fully connected layer
-        :param num_layers: number of layers of the RNN
-        :param dropout: dropout probability in the LSTM layer
-        :param recurrent_type: whether to use RNN or LSTM as recurrent layers
-        :param alignment: whether to use dot product or feedforward NN
+        :param num_layers: number of layers in the in the pre-Attention
+        recurrent layer
+        :param dropout: dropout probability in the pre-Attention recurrent layer
+        :param recurrent_type: whether to use RNN, GRU or LSTM layers
+        :param alignment: whether to use dot product or feedforward NN to align
+        hidden states of pre- and post-Attention layers
+        :param additional_y_layer:
+        :param switch_cells
         """
         super().__init__()
         assert recurrent_type in ['rnn', 'lstm', 'gru']
@@ -186,7 +200,8 @@ class AttentionModel(nn.Module):
         if self.alignment == 'ffnn':
             # Xavier initialisation
             self.w_a = nn.Parameter(
-                torch.randn(hidden_size, hidden_size, requires_grad=True) / np.sqrt(hidden_size),
+                torch.randn(hidden_size, hidden_size,
+                            requires_grad=True) / np.sqrt(hidden_size),
                 requires_grad=True
             )
             self.u_a = nn.Parameter(
@@ -205,10 +220,12 @@ class AttentionModel(nn.Module):
             self.recurrent_cell_post = nn.RNNCell(input_size=self.hidden_size,
                                                   hidden_size=self.hidden_size)
             if switch_cells == 'yes':
-                self.recurrent_cell_post_1 = nn.RNNCell(input_size=self.hidden_size,
-                                                      hidden_size=self.hidden_size)
-                self.recurrent_cell_post_2 = nn.RNNCell(input_size=self.hidden_size,
-                                                      hidden_size=self.hidden_size)
+                self.recurrent_cell_post_1 = nn.RNNCell(
+                    input_size=self.hidden_size,
+                    hidden_size=self.hidden_size)
+                self.recurrent_cell_post_2 = nn.RNNCell(
+                    input_size=self.hidden_size,
+                    hidden_size=self.hidden_size)
         elif recurrent_type == 'lstm':
             self.recurrent_pre = nn.LSTM(input_size=self.input_size,
                                          hidden_size=self.hidden_size,
@@ -217,10 +234,12 @@ class AttentionModel(nn.Module):
             self.recurrent_cell_post = nn.LSTMCell(input_size=self.hidden_size,
                                                    hidden_size=self.hidden_size)
             if switch_cells == 'yes':
-                self.recurrent_cell_post_1 = nn.LSTMCell(input_size=self.hidden_size,
-                                                      hidden_size=self.hidden_size)
-                self.recurrent_cell_post_2 = nn.LSTMCell(input_size=self.hidden_size,
-                                                      hidden_size=self.hidden_size)
+                self.recurrent_cell_post_1 = nn.LSTMCell(
+                    input_size=self.hidden_size,
+                    hidden_size=self.hidden_size)
+                self.recurrent_cell_post_2 = nn.LSTMCell(
+                    input_size=self.hidden_size,
+                    hidden_size=self.hidden_size)
         elif recurrent_type == 'gru':
             self.recurrent_pre = nn.GRU(input_size=self.input_size,
                                         hidden_size=self.hidden_size,
@@ -229,10 +248,12 @@ class AttentionModel(nn.Module):
             self.recurrent_cell_post = nn.GRUCell(input_size=self.hidden_size,
                                                   hidden_size=self.hidden_size)
             if switch_cells == 'yes':
-                self.recurrent_cell_post_1 = nn.GRUCell(input_size=self.hidden_size,
-                                                      hidden_size=self.hidden_size)
-                self.recurrent_cell_post_2 = nn.GRUCell(input_size=self.hidden_size,
-                                                      hidden_size=self.hidden_size)
+                self.recurrent_cell_post_1 = nn.GRUCell(
+                    input_size=self.hidden_size,
+                    hidden_size=self.hidden_size)
+                self.recurrent_cell_post_2 = nn.GRUCell(
+                    input_size=self.hidden_size,
+                    hidden_size=self.hidden_size)
 
         if self.additional_y_layer == 'yes':
             self.add_y_layer = nn.Linear(self.hidden_size + 1, self.hidden_size)
@@ -240,6 +261,12 @@ class AttentionModel(nn.Module):
         self.fc = nn.Linear(self.hidden_size, self.n_outputs)
 
     def init_hidden(self, which, bs):
+        """Hidden state initialisation.
+
+        :param which: wheter to initialise for pre- or post-Attention layer
+        :param bs: batch_size
+        :return:
+        """
         assert which in ['pre', 'post']
         if which == 'pre':
             dims = self.num_layers, bs, self.hidden_size
@@ -331,5 +358,3 @@ class AttentionModel(nn.Module):
                         attention, (hidden_post, state_post)
                     )
         return self.fc(hidden_post)
-
-

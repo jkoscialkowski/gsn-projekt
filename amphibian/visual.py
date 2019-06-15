@@ -10,6 +10,7 @@ from torch.utils.data import DataLoader
 
 NO_COMPANIES = 10
 
+
 class ConfusionMatrix:
     def __init__(self, confmat, class_labels, truth_along_y=True,
                  figsize=(9, 9)):
@@ -199,5 +200,3 @@ class MAVI:
 
     def plot_mavi(self, company_no):
         pass
-
-# TODO 1: Finish MAVI plotting
