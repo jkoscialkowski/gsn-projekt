@@ -191,7 +191,7 @@ class Formatting(object):
 
 
 class FormattingY(object):
-    def __call__(self, whole_set, eps_up=0.003, eps_down=-0.02):
+    def __call__(self, whole_set, eps_up=0.0035, eps_down=-0.0185):
         """
         :param whole_set: set of observations
         :param eps_up: threshold for return being regarded as 'up'
