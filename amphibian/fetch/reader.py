@@ -17,9 +17,13 @@ class AmphibianReader:
         """Class for reading quotes and transforming them to numpy arrays
         and torch tensors.
 
-        :param data_path: Path to folder with region folders containing quotes
-        :param min_date: Minimum date to be read
-        :param max_date: Maximum date to be read
+        It requires the quotes to be stored in separate folders for regions,
+        each quote in a single file with a meaningful name. This is how
+        amphibian.fetch.downloader.download saves files.
+
+        :param data_path: path to folder with region folders containing quotes
+        :param min_date: minimum date to be read
+        :param max_date: maximum date to be read
         """
         self.data_path = data_path
         self.min_date = min_date
@@ -33,7 +37,7 @@ class AmphibianReader:
         date filters. Date column is cast to datetime.datetime and duplicates
         are dropped.
 
-        :return: Dictionary with region:quote:pd.DataFrame of quotes
+        :return: dictionary with region:quote:pd.DataFrame of quotes
         """
         self.csvs = {}
         # Iterate over regions
@@ -66,7 +70,7 @@ class AmphibianReader:
         These are necessary, because trade does not occur on all days in all
         countries and the data size has to be unified somehow.
 
-        :return: One-column pd.DataFrame with unique dates
+        :return: one-column pd.DataFrame with unique dates
         """
         # Initialize an empty set
         unique_dates = set()
@@ -88,7 +92,7 @@ class AmphibianReader:
         Data is left joined to unique dates so that the date range is the same
         for all companies, possibly filled with NaN's.
 
-        :return: Dictionary region:np.array with quotes
+        :return: dictionary region:np.array with quotes
         """
         # Checking if the necessary objects exist
         if not hasattr(self, 'csvs'):
@@ -117,7 +121,7 @@ class AmphibianReader:
         The tensors are created from the numpy arrays. Type is cast to
         torch.float32 and device is set according to CUDA availability.
 
-        :return: Dictionary region:torch.Tensor with quotes
+        :return: dictionary region:torch.Tensor with quotes
         """
         # Checking if the numpy arrays have been created
         if not hasattr(self, 'numpy'):
@@ -135,8 +139,8 @@ class AmphibianReader:
     def __getitem__(self, what):
         """Method for extracting read data using square brackets.
 
-        :param what: Either a string or a tuple with selected keys
-        :return: Selected dictionary/pd.DataFrame/np.array/torch.Tensor
+        :param what: either a string or a tuple with selected keys
+        :return: selected dictionary/pd.DataFrame/np.array/torch.Tensor
         """
         # Selecting using the first element of `what`
         if len(what) == 1:
