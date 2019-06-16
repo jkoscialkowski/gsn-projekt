@@ -2,8 +2,8 @@ import math
 
 
 class TrainTestSplit:
-    def __init__(self, am_reader, input_reg='ASIA_PACIFIC', pred_reg='EMEIA',
-                 int_start=0, int_end=10, train_size=0.8):
+    def __init__(self, am_reader, input_reg: str = 'ASIA_PACIFIC', pred_reg: str = 'EMEIA',
+                 int_start: int = 0, int_end: int = 10, train_size: float = 0.8):
         """
         Class Train_test_split
 

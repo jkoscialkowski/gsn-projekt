@@ -10,9 +10,10 @@ else:
 
 
 class TimeSeriesDataset(Dataset):
-    def __init__(self, tt_split, int_len=5, transform=None, need_y='no'):
+    def __init__(self, tt_split, int_len: int = 5, transform=None, need_y: str = 'no'):
         """
-        Class TimeSeriesDataset
+        Class TimeSeriesDataset - implementation of class that inherited from PyTorch class
+        torch.utils.data.Dataset and override methods: __len__ and __getitem__
 
         :param ttSpplit: object from Train_test_split class
         :param int_len: number of days in one observation
@@ -61,7 +62,9 @@ class TimeSeriesDataset(Dataset):
 
 class ValidDataset(Dataset):
     def __init__(self, tsds):
-        """Class ValidDataset
+        """
+        Class ValidDataset - implementation of class that inherited from PyTorch class
+        torch.utils.data.Dataset and override methods: __len__ and __getitem__
 
         While TimeSeriesDataset is the main machine for data processing,
         ValidDataset takes an instance of TimeSeriesDataset and creates a proper
@@ -102,7 +105,8 @@ class ValidDataset(Dataset):
 
 class FillNaN(object):
     def __call__(self, whole_set):
-        """FillNaN class implementing a __call__ method to comply with the
+        """
+        FillNaN class implementing a __call__ method to comply with the
         torchvision.transforms API.
 
         :param whole_set: set of observations
@@ -126,9 +130,12 @@ class FillNaN(object):
 
 
 class Normalizing(object):
-    def __call__(self, whole_set, eps=10 ** -3):
+    def __call__(self, whole_set, eps: float = 10 ** -3):
         """
-        :param whole_set: set of observarions
+        Normalizing class implementing a __call__ method to comply with the
+        torchvision.transforms API.
+
+        :param whole_set: set of observations
         :return: normalized set of observations
         """
         train_obs, train_y = whole_set['train_obs'], whole_set['train_y']
@@ -157,8 +164,11 @@ class Normalizing(object):
 class DummyFillNaN(object):
     def __call__(self, whole_set):
         """
+        DummyFillNaN class implementing a __call__ method to comply with the
+        torchvision.transforms API.
+
         :param whole_set: set of observations
-        :return: set of observations with NaN filled
+        :return: set of observations with NaN filled with zeros
         """
         train_obs, train_y = whole_set['train_obs'], whole_set['train_y']
         test_obs, test_y = whole_set['test_obs'], whole_set['test_y']
@@ -177,6 +187,9 @@ class DummyFillNaN(object):
 class Formatting(object):
     def __call__(self, whole_set):
         """
+        Formatting class implementing a __call__ method to comply with the
+        torchvision.transforms API.
+
         :param whole_set: set of observations
         :return: set of observations in the right shape --- suitable for NN (see architectures.py)
         """
@@ -191,8 +204,11 @@ class Formatting(object):
 
 
 class FormattingY(object):
-    def __call__(self, whole_set, eps_up=0.0035, eps_down=-0.0185):
+    def __call__(self, whole_set, eps_up: float = 0.0035, eps_down: float = -0.0185):
         """
+        FormattingY class implementing a __call__ method to comply with the
+        torchvision.transforms API.
+
         :param whole_set: set of observations
         :param eps_up: threshold for return being regarded as 'up'
         :param eps_down: threshold for return being regarded as 'down'
