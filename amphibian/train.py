@@ -60,7 +60,7 @@ class SingleTrainer:
                                     lr=learning_rate)
 
     def train(self, train_ds, valid_ds, plot_loss=True, verbose=True,
-              save_path=None, need_y='no'):
+              save_path=None, need_y: str = 'no'):
         """Method for training, takes train and validation Datasets, as well
         as parameters specifying training monitoring and trains a network for
         a given set of hyperparameters.
@@ -70,7 +70,8 @@ class SingleTrainer:
         :param plot_loss: whether to plot loss during training
         :param verbose: whether to print loss after each epoch
         :param save_path: if given, serialises the model and saves there
-        :param need_y: changes commands for architectures considering lagged y's
+        :param need_y: command to extract y's in order to train Attention based models with
+        'state' or 'switch cells' layer
         """
         # Create DataLoaders
         assert need_y in ['no', 'yes'], 'Should be no/yes'
@@ -193,7 +194,8 @@ class CrossValidation:
         :param log_path: where to save a .csv file with CV results
         :param n_iter: number of CV iterations
         :param folds: number of CV folds
-        :param need_y: changes commands for architectures considering lagged y's
+        :param need_y: command to extract y's in order to train Attention based models with
+        'state' or 'switch cells' layer
         """
         assert architecture in IMPLEMENTED_ARCHITECTURES, \
             'Chosen architecture is not implemented'
@@ -237,11 +239,10 @@ class CrossValidation:
         """Create datasets for all region combinations for given time interval
         beginning and end.
 
-        :param self:
         :param int_start: interval start
         :param int_end: interval start
-        :param seq_len:
-        :param need_y:
+        :param seq_len: number of days in observation
+        :param need_y: extract y's in order to train Attention based models with 'state' or 'switch cells' layer
         :return: train and validation ConcatDatasets
         """
         # Get train test split for selected part of the training set

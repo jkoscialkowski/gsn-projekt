@@ -167,9 +167,7 @@ class AttentionModel(nn.Module):
                  switch_cells: str = 'no'):
         """
         Class AttentionModel - implementation of Attention Mechanism, with the
-        possibility to
-
-        # TODO: MJ finish the docstring and parameter description pls
+        possible of extensions: additional 'state' layer; additional 'switch state' layer
 
         :param batch_size: size of the batch
         :param seq_len: number of days
@@ -182,8 +180,8 @@ class AttentionModel(nn.Module):
         :param recurrent_type: whether to use RNN, GRU or LSTM layers
         :param alignment: whether to use dot product or feedforward NN to align
         hidden states of pre- and post-Attention layers
-        :param additional_y_layer:
-        :param switch_cells
+        :param additional_y_layer: whether Attention model should be extended with 'state' layer
+        :param switch_cells: whether Attention model with 'state' layer should be extended with switch cells layer
         """
         super().__init__()
         assert recurrent_type in ['rnn', 'lstm', 'gru']
@@ -263,9 +261,9 @@ class AttentionModel(nn.Module):
     def init_hidden(self, which, bs):
         """Hidden state initialisation.
 
-        :param which: wheter to initialise for pre- or post-Attention layer
+        :param which: whether to initialise for pre- or post-Attention layer
         :param bs: batch_size
-        :return:
+        :return: initialised hidden state
         """
         assert which in ['pre', 'post']
         if which == 'pre':
