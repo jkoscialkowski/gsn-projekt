@@ -1,6 +1,6 @@
 ipython==7.5.0
 jupyter==1.0.0
-jupyterlab==0.35.5
+jupyterlab==1.2.21
 livelossplot==0.4.1
 matplotlib==3.0.3
 numpy==1.16.3
