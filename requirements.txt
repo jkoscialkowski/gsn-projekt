@@ -3,7 +3,7 @@ jupyter==1.0.0
 jupyterlab==0.35.5
 livelossplot==0.4.1
 matplotlib==3.0.3
-numpy==1.16.3
+numpy==1.22.0
 pandas==0.24.2
 pandas-datareader==0.7.0
 pycountry-convert==0.7.2
